@@ -1,0 +1,8 @@
+SkeletonForm = 44, 58, 821, 683, , 22, 29, 799, 654, C
+Utf8CharClass = 0, 0, 0, 0, C
+Utf8MarcFileClass = 0, 0, 0, 0, C
+Utf8MarcRecordClass = 0, 0, 0, 0, C
+API32 = 22, 29, 799, 654, C
+GeneralRoutines = 176, 232, 953, 857, 
+UtilMiscUtf8 = 0, 0, 0, 0, C
+Ini = 0, 0, 0, 0, C

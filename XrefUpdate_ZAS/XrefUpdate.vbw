@@ -1,0 +1,14 @@
+Utf8CharClass = 0, 0, 0, 0, C
+Utf8MarcFileClass = 0, 0, 0, 0, C
+Utf8MarcRecordClass = 0, 0, 0, 0, C
+API32 = 0, 0, 0, 0, C
+GeneralRoutines = 44, 58, 1376, 831, C
+Ini = 0, 0, 0, 0, C
+Globals = 44, 58, 1095, 831, C
+GeneralTypes = 0, 0, 0, 0, C
+VgerUtf8 = 198, 261, 1249, 1034, C
+SkeletonForm = 88, 116, 1420, 889, C, 44, 58, 1376, 831, C
+UtliMiscNonUtf8 = 0, 0, 0, 0, C
+OclcRoutines = 66, 87, 1398, 860, C
+OclcTypes = 0, 0, 0, 0, C
+LocalCode = 44, 58, 1095, 831, 

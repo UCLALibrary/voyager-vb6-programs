@@ -1,0 +1,6 @@
+API32 = 0, 0, 0, 0, C
+GeneralRoutines = 0, 0, 0, 0, C
+Globals = 66, 87, 1122, 716, C
+GeneralTypes = 0, 0, 0, 0, C
+SkeletonForm = 110, 145, 887, 800, C, 22, 29, 1078, 684, C
+LocalCode = 44, 58, 821, 713, 

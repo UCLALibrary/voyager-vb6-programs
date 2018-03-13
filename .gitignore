@@ -1,0 +1,18 @@
+# We want only a handful of files, and can't predict what the majority of unwanted files look like.
+#
+# Ignore everything
+*
+# Don't ignore directories, so we can recurse into them
+!*/
+# Don't ignore .gitignore or README.md
+!.gitignore
+!*.md
+# Don't ignore scripts which run the programs
+#... except for now, do ignore them as some have passwords....
+# !*.bat
+# !*.wsf
+# Finally, don't ignore the VB6 source files we care about
+!*.bas
+!*.frm
+!*.vbp
+!*.vbw
