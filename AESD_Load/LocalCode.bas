@@ -75,9 +75,9 @@ Public Sub RunLocalCode()
             Loop
             
             '3) Modify AESD 856 fields:
-            '   1. Change $3 to "Available issues"
-            '   2. Change $z to "Restricted to UCLA"
-            '   3. Change $x to "UCLA"
+            '   1. Change $3 to "Available issues" (serials only)
+            '   2. Change $z to "Restricted to UCLA" (all)
+            '   3. Change $x to "UCLA" (all)
             .FldFindFirst "856"
             Do While .FldWasFound
                 .SfdFindFirst "z"
@@ -85,10 +85,12 @@ Public Sub RunLocalCode()
                     If InStr(1, .SfdText, "Agricultural & environmental science database", vbTextCompare) > 0 Then
                         'Change this subfield, and others in the same field
                         .SfdText = "Restricted to UCLA"
-                        'Change $3
-                        .SfdFindFirst "3"
-                        If .SfdWasFound Then
-                            .SfdText = "Available issues"
+                        'Change $3 (serials only)
+                        If IsSerial(.GetLeaderValue(7, 1)) Then
+                            .SfdFindFirst "3"
+                            If .SfdWasFound Then
+                                .SfdText = "Available issues"
+                            End If
                         End If
                         'Change $x
                         .SfdFindFirst "x"
