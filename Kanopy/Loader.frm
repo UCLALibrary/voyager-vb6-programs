@@ -711,45 +711,47 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
             .FldFindNext
         Loop '9XX
         
-        '20070627: get YYYYMMDD from 005 if present, else from OCLC filename
-        .FldFindFirst "005"
-        If .FldWasFound Then
-            f005 = Mid(.FldText, 1, 8) 'YYYYMMDD
-        Else
-            f005 = Mid(Format(Date, "yyyy"), 1, 2) & Mid(GL.BaseFilename, 2, 6)  'CC + YYMMDD; assumes files are named in OCLC's normal way, with D followed by YYMMDD
-        End If
-        
-        '20070627: add 948 $c with YYYYMMDD
-        '20090921: check $a for 'pacq' and set RecordIn.NeedsInProcess if found
-        RecordIn.NeedsInProcess = False
-        .FldFindFirst "948"
-        Do While .FldWasFound
-            .SfdFindFirst "a"
-            Do While .SfdWasFound
-                If .SfdText = "pacq" Then
-                    RecordIn.NeedsInProcess = True
-                End If
-                .SfdFindNext
-            Loop
-            'Remove any existing $c
-            .SfdFindFirst "c"
-            Do While .SfdWasFound
-                .SfdDelete
-                .SfdFindNext
-            Loop
-            'Add new $c in appropriate place
-            .SfdMoveFirst
-            Do While .SfdCode <> "" And .SfdCode < "c"
-                .SfdMoveNext
-            Loop
-            If .SfdPointer >= 0 Then
-                .SfdInsertBefore "c", f005
-            Else
-                .SfdMoveLast
-                .SfdInsertAfter "c", f005
-            End If
-            .FldFindNext
-        Loop
+'        '20070627: get YYYYMMDD from 005 if present, else from OCLC filename
+'        'Kanopy records don't need this
+'        .FldFindFirst "005"
+'        If .FldWasFound Then
+'            f005 = Mid(.FldText, 1, 8) 'YYYYMMDD
+'        Else
+'            f005 = Mid(Format(Date, "yyyy"), 1, 2) & Mid(GL.BaseFilename, 2, 6)  'CC + YYMMDD; assumes files are named in OCLC's normal way, with D followed by YYMMDD
+'        End If
+'
+'        '20070627: add 948 $c with YYYYMMDD
+'        '20090921: check $a for 'pacq' and set RecordIn.NeedsInProcess if found
+'        'Kanopy records have a 948 $c already, we will keep it
+'        RecordIn.NeedsInProcess = False
+'        .FldFindFirst "948"
+'        Do While .FldWasFound
+'            .SfdFindFirst "a"
+'            Do While .SfdWasFound
+'                If .SfdText = "pacq" Then
+'                    RecordIn.NeedsInProcess = True
+'                End If
+'                .SfdFindNext
+'            Loop
+'            'Remove any existing $c
+'            .SfdFindFirst "c"
+'            Do While .SfdWasFound
+'                .SfdDelete
+'                .SfdFindNext
+'            Loop
+'            'Add new $c in appropriate place
+'            .SfdMoveFirst
+'            Do While .SfdCode <> "" And .SfdCode < "c"
+'                .SfdMoveNext
+'            Loop
+'            If .SfdPointer >= 0 Then
+'                .SfdInsertBefore "c", f005
+'            Else
+'                .SfdMoveLast
+'                .SfdInsertAfter "c", f005
+'            End If
+'            .FldFindNext
+'        Loop
         
         '20130819: Temporary workaround for records with 6xx ind2=7 but no $2
         'These cause catsvr crash in Voyager 8.2.0; supposedly fixed in 8.2.1+
