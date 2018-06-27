@@ -1,0 +1,13 @@
+Loader = 47, 10, 1339, 956, Z, 22, 29, 1078, 684, C
+Utf8CharClass = 0, 0, 0, 0, C
+Utf8MarcFileClass = 0, 0, 0, 0, C
+Utf8MarcRecordClass = 66, 87, 1740, 769, C
+API32 = 0, 0, 0, 0, C
+GeneralRoutines = 198, 261, 973, 916, C
+Ini = 0, 0, 0, 0, C
+Globals = 132, 174, 907, 829, C
+GeneralTypes = 0, 0, 0, 0, C
+OclcRoutines = 154, 203, 1828, 885, C
+OclcTypes = 88, 116, 863, 771, 
+UtliMiscNonUtf8 = 0, 0, 0, 0, C
+VgerUtf8 = 66, 87, 1740, 769, C
