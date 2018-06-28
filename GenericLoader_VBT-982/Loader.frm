@@ -73,29 +73,23 @@ Private Sub ProcessRecords()
         'Subsequent functions may also write log messages for current record.
         WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
         
-        If RecordIsWanted(SourceRecord) Then
 'Tempoarily disable debugging
 DBUG = False
-            PrepareRecord SourceRecord
-            GetOclcNumbers SourceRecord
-            SearchVoyager SourceRecord
+        PrepareRecord SourceRecord
+        GetOclcNumbers SourceRecord
+        SearchVoyager SourceRecord
+
 DBUG = True
-            
-            'Multiple matches get rejected, so there must be 0 or 1 matches if OK
-            If OkToUpdate(SourceRecord) Then
-                If SourceRecord.BibMatchCount = 1 Then
-                    'Voyager record will be updated, though Voyager records may also be written to a review file.
-                    PrepareForUpdate SourceRecord
-                    'UpdateVoyager SourceRecord
-                Else
-                    AddRecord SourceRecord
-                End If
-            End If 'OkToUpdate
-        
-        Else
-            'Record is not wanted so reject it
-            WriteRejectRecord SourceRecord
-        End If 'RecordIsWanted
+        'Multiple matches get rejected, so there must be 0 or 1 matches if OK
+        If OkToUpdate(SourceRecord) Then
+            If SourceRecord.BibMatchCount = 1 Then
+                'Voyager record will be updated, though Voyager records may also be written to a review file.
+                PrepareForUpdate SourceRecord
+                'UpdateVoyager SourceRecord
+            Else
+                AddRecord SourceRecord
+            End If
+        End If 'OkToUpdate
         
         'End of log entry for record
         WriteLog GL.Logfile, ""
@@ -397,16 +391,6 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
                         LogMessage = "Match found: incoming OCLC 035 $" & IIf(OclcCount = 1, "a", "z") & " " & Replace(SearchNumber, "UCOCLC", "")
                         LogMessage = LogMessage & " matches Voyager bib " & BibID
                         WriteLog GL.Logfile, vbTab & LogMessage
-                        
-                        'Special condition not in specs - reject record per vbross discussion on Jira VBT-217.
-                        '$z matches (current OclcCount > 1, which is only true for incoming 035 $z) but incoming $a did not (since current match caused BibMatchCount = 1, meainng no matches before this).
-                        'Set BibMatchCount to normally impossible negative value as flag to caller so I don't have to modify the OclcRecordType... yes, rewrite this correctly in another language someday.
-                        'TODO: Remove this code if no objection from Melissa on VBT-982
-'                        If .BibMatchCount = 1 And OclcCount > 1 Then
-'                            .BibMatchCount = -1
-'                            'Break out of the OclcCount For..Next block
-'                            Exit For
-'                        End If
                     End If
                 End With 'SourceRecord
             Loop 'GetNextRow
@@ -490,44 +474,9 @@ Private Function OkToUpdate(SourceRecord As OclcRecordType) As Boolean
             End If
             
         End If '.BibMatchCount = 1
-        
-        'Incoming 035 $z matched but incoming 035 $a did not, detected and flagged in SearchRecords()
-        'TODO: Waiting for Kevin Balster/Melissa Beck to clarify if this is needed 20180627.
-'        If .BibMatchCount = -1 Then
-'            WriteLog GL.Logfile, vbTab & "REJECTED: Incoming record 035 $z matched Voyager, but incoming 035 $a did not"
-'            WriteRejectRecord SourceRecord
-'            OK = False
-'        End If
-        
     End With 'SourceRecord
     
     OkToUpdate = OK
-End Function
-
-Private Function RecordIsWanted(SourceRecord As OclcRecordType)
-    'Some OCLC records are completely unwanted.
-    'Log message and set flag for rejection by caller.
-    Dim IsWanted As Boolean
-    IsWanted = True
-    
-    'Reject due to various criteria.
-    With SourceRecord.BibRecord
-        '599 $b Removed from collection...
-        .FldFindFirst "599"
-        Do While .FldWasFound
-            .SfdFindFirst "b"
-            Do While .SfdWasFound
-                If InStr(1, .SfdText, "Removed from collection", vbTextCompare) = 1 Then
-                    WriteLog GL.Logfile, vbTab & "REJECTED: 599 $b Removed from collection..."
-                    IsWanted = False
-                End If
-                .SfdFindNext
-            Loop
-            .FldFindNext
-        Loop
-    End With
-    
-    RecordIsWanted = IsWanted
 End Function
 
 Private Sub PrepareForUpdate(SourceRecord As OclcRecordType)
