@@ -36,7 +36,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-    ''''GL.Init "-f " & App.Path & "\test.mrc -i 0"
+    'GL.Init "-f " & App.Path & "\test.mrc -i 0"
     
     DBUG = Not GL.ProductionMode
     
@@ -74,15 +74,23 @@ Private Sub ProcessRecords()
         WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
         
         If RecordIsWanted(SourceRecord) Then
+'Tempoarily disable debugging
+DBUG = False
             PrepareRecord SourceRecord
             GetOclcNumbers SourceRecord
-'            SearchVoyager SourceRecord
-'
-'            If OkToUpdate(SourceRecord) Then
-'                'Voyager record will be updated, though Voyager records may also be written to a review file.
-'                PrepareForUpdate SourceRecord
-'                UpdateVoyager SourceRecord
-'            End If 'OkToUpdate
+            SearchVoyager SourceRecord
+DBUG = True
+            
+            'Multiple matches get rejected, so there must be 0 or 1 matches if OK
+            If OkToUpdate(SourceRecord) Then
+                If SourceRecord.BibMatchCount = 1 Then
+                    'Voyager record will be updated, though Voyager records may also be written to a review file.
+                    PrepareForUpdate SourceRecord
+                    'UpdateVoyager SourceRecord
+                Else
+                    AddRecord SourceRecord
+                End If
+            End If 'OkToUpdate
         
         Else
             'Record is not wanted so reject it
@@ -250,8 +258,11 @@ Private Sub PrepareRecord(SourceRecord As OclcRecordType)
         
     End With 'SourceRecord.BibRecord
     
+    'Create the UCOCLC 035 fields needed for WorldCat linking
+    Set SourceRecord.BibRecord = UpdateUcoclc(SourceRecord.BibRecord)
+    
     If DBUG = True Then
-        WriteLog GL.Logfile, vbCrLf & "Bib record after pre-processing:"
+        WriteLog GL.Logfile, vbCrLf & "==> Bib record after pre-processing:"
         WriteLog GL.Logfile, SourceRecord.BibRecord.TextRaw
     End If
     
@@ -294,7 +305,7 @@ Private Sub CreateInternetHoldings(SourceRecord As OclcRecordType)
     End With 'HolRecord
 
     If DBUG = True Then
-        WriteLog GL.Logfile, vbCrLf & "Hol record after pre-processing:"
+        WriteLog GL.Logfile, vbCrLf & "==> Hol record after pre-processing:"
         WriteLog GL.Logfile, vbCrLf & HolRecord.TextRaw
     End If
     
@@ -314,16 +325,20 @@ Private Sub GetOclcNumbers(SourceRecord As OclcRecordType)
     Dim OclcCount As Integer
     ReDim SourceRecord.OclcNumbers(1 To MAX_OCLC_COUNT)
     OclcCount = 0
+'Tempoarily enable debugging
+DBUG = True
     
     With SourceRecord.BibRecord
         .FldFindFirst "035"
         .SfdMoveTop
+        If DBUG Then
+            WriteLog GL.Logfile, "==> OCLC numbers for searching:"
+        End If
         Do While .SfdMoveNext
             OclcCount = OclcCount + 1
             SourceRecord.OclcNumbers(OclcCount) = .SfdText
             If DBUG Then
-                WriteLog GL.Logfile, vbCrLf & "OCLC numbers for searching:"
-                WriteLog GL.Logfile, vbTab & SourceRecord.OclcNumbers(OclcCount)
+                WriteLog GL.Logfile, vbTab & "==> " & .SfdCode & " " & SourceRecord.OclcNumbers(OclcCount)
             End If
         Loop
     End With
@@ -386,29 +401,27 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
                         'Special condition not in specs - reject record per vbross discussion on Jira VBT-217.
                         '$z matches (current OclcCount > 1, which is only true for incoming 035 $z) but incoming $a did not (since current match caused BibMatchCount = 1, meainng no matches before this).
                         'Set BibMatchCount to normally impossible negative value as flag to caller so I don't have to modify the OclcRecordType... yes, rewrite this correctly in another language someday.
-                        If .BibMatchCount = 1 And OclcCount > 1 Then
-                            .BibMatchCount = -1
-                            'Break out of the OclcCount For..Next block
-                            Exit For
-                        End If
+                        'TODO: Remove this code if no objection from Melissa on VBT-982
+'                        If .BibMatchCount = 1 And OclcCount > 1 Then
+'                            .BibMatchCount = -1
+'                            'Break out of the OclcCount For..Next block
+'                            Exit For
+'                        End If
                     End If
                 End With 'SourceRecord
             Loop 'GetNextRow
             
         End With 'Vger
         
-        'Special case: if no matches after first search (which is always for incoming OCLC 035 $a), no need to continue
-        'We don't case if incoming 035 $z matches Voyager if the $a didn't.
-        If OclcCount = 1 And SourceRecord.BibMatchCount = 0 Then
-            'Logging for this case done later
-            Exit For
-        End If
     Next 'OclcCount
     
     'Remove unused space from array
     With SourceRecord
         If .BibMatchCount > 0 Then
             ReDim Preserve .BibMatches(1 To .BibMatchCount)
+        Else
+            'Nothing added to the array, but previous results may still exist
+            Erase .BibMatches
         End If
     End With
     
@@ -439,6 +452,8 @@ Private Function OkToUpdate(SourceRecord As OclcRecordType) As Boolean
     OK = True   'Any condition below may set to False
     
     With SourceRecord
+        'No matches in Voyager: no need to do anything, record will be added
+        
         'Multiple matches in Voyager
         If .BibMatchCount > 1 Then
             WriteLog GL.Logfile, vbTab & "REJECTED: Multiple matches in Voyager"
@@ -476,13 +491,13 @@ Private Function OkToUpdate(SourceRecord As OclcRecordType) As Boolean
             
         End If '.BibMatchCount = 1
         
-        'Condition 7 (incoming 035 $z matched but incoming 035 $a did not, detected and flagged in SearchRecords())
-        'TODO: Waiting for Kevin Balster to clarify if this is needed 20180627.
-        If .BibMatchCount = -1 Then
-            WriteLog GL.Logfile, vbTab & "REJECTED: Incoming record 035 $z matched Voyager, but incoming 035 $a did not"
-            WriteRejectRecord SourceRecord
-            OK = False
-        End If
+        'Incoming 035 $z matched but incoming 035 $a did not, detected and flagged in SearchRecords()
+        'TODO: Waiting for Kevin Balster/Melissa Beck to clarify if this is needed 20180627.
+'        If .BibMatchCount = -1 Then
+'            WriteLog GL.Logfile, vbTab & "REJECTED: Incoming record 035 $z matched Voyager, but incoming 035 $a did not"
+'            WriteRejectRecord SourceRecord
+'            OK = False
+'        End If
         
     End With 'SourceRecord
     
@@ -497,22 +512,6 @@ Private Function RecordIsWanted(SourceRecord As OclcRecordType)
     
     'Reject due to various criteria.
     With SourceRecord.BibRecord
-        'Non-serials (anything other than "s")
-        If Mid(.Leader, 8, 1) <> "s" Then   'LDR/07, via 1-based array
-            WriteLog GL.Logfile, vbTab & "REJECTED: not a serial"
-            IsWanted = False
-        End If
-        
-        'Last 040 $d = CLU
-        .FldFindFirst "040"
-        If .FldWasFound Then
-            .SfdFindLast "d"
-            If .SfdText = "CLU" Then
-                WriteLog GL.Logfile, vbTab & "REJECTED: Final 040 $d = CLU"
-                IsWanted = False
-            End If
-        End If
-        
         '599 $b Removed from collection...
         .FldFindFirst "599"
         Do While .FldWasFound
@@ -573,6 +572,8 @@ Private Sub PrepareForUpdate(SourceRecord As OclcRecordType)
             Loop
         End If
     End With 'OclcRecord
+
+DebugSourceRecord SourceRecord
     
     Set VgerRecord = GetVgerBibRecord(SourceRecord.BibMatches(1))
     With VgerRecord
@@ -604,19 +605,6 @@ Private Sub PrepareForUpdate(SourceRecord As OclcRecordType)
             Loop
         End If
         
-        '856 $x CDL
-        VgerHas856xCDL = False
-        .FldFindFirst "856"
-        Do While .FldWasFound
-            .SfdFindFirst "x"
-            Do While .SfdWasFound
-                If .SfdText = "CDL" Then
-                    VgerHas856xCDL = True
-                End If
-                .SfdFindNext
-            Loop
-            .FldFindNext
-        Loop
     End With 'VgerRecord
     
     'Set WriteVger flag so record gets written only once, regardless of number of log messages written.
@@ -647,12 +635,6 @@ Private Sub PrepareForUpdate(SourceRecord As OclcRecordType)
         WriteLog GL.Logfile, vbTab & "INFO: 245 $anp mismatch"
         WriteLog GL.Logfile, vbTab & vbTab & "OCLC: " & OclcF245anp
         WriteLog GL.Logfile, vbTab & vbTab & "VGER: " & VgerF245anp
-        WriteVger = True
-    End If
-    
-    'Log message if Voyager has 856 $x CDL
-    If VgerHas856xCDL = True Then
-        WriteLog GL.Logfile, vbTab & "INFO: Voyager has 856 $x CDL"
         WriteVger = True
     End If
     
@@ -737,11 +719,7 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
                 'If there are multiple 910 fields in the existing Voyager record, concatenate them to a single field before adding the 910 data from the incoming OCLC record.
                 Case "910"
                     With OclcBib
-                        If .FldFindFirst("910") = False Then
-                            'No OCLC 910 for some reason, so create one first
-                            .FldAddGeneric "910", "  ", .SfdMake("a", "UclaCollMgr " & GetDateFromFilename()), 3
-                            .FldFindFirst "910"
-                        End If
+                        .FldFindFirst "910"
                         'Then append current Voyager 910 to OCLC 910
                         .FldText = .FldText & VgerBib.FldText
                         'No AddField for 910 as content is being added directly to the OCLC record
@@ -795,14 +773,6 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
     End If
 
 End Sub
-
-Private Function GetDateFromFilename() As String
-    'QAD function to get date portion (YYYYMMDD) from input filename
-    'Input filenames look like: wcmserials_YYYYMMDD.mrc
-    Dim YYYYMMDD As String
-    YYYYMMDD = GetDigits(GL.BaseFilename)
-    GetDateFromFilename = YYYYMMDD
-End Function
 
 Private Function NormalizeText(ByVal str As String) As String
     'QAD normalization function - returns just ASCII 0-9 and letters, uppercased
@@ -864,3 +834,59 @@ Private Function CallNumberIsOK(str As String) As Boolean
     CallNumberIsOK = IsOK
 End Function
 
+Private Sub DebugSourceRecord(SourceRecord As OclcRecordType)
+    Dim cnt As Integer
+    With SourceRecord
+        WriteLog GL.Logfile, "==> Bib match count: " & .BibMatchCount
+        'WriteLog GL.Logfile, "Bib record     : " & .BibRecord.TextRaw
+        For cnt = 1 To .BibMatchCount
+            WriteLog GL.Logfile, "==> Bib match " & cnt & ": " & .BibMatches(cnt)
+        Next
+    End With
+End Sub
+
+Private Sub AddRecord(SourceRecord As OclcRecordType)
+    'Add the bib and holdings record associated with SourceRecord to Voyager
+    Const LIB_ID As Long = 1
+    Dim BibRC As AddBibReturnCode
+    Dim HolRC As AddHoldingReturnCode
+    Dim BibID As Long
+    Dim HolID As Long
+    Dim HolLoc As LocationType
+    
+If DBUG Then
+    WriteLog GL.Logfile, "DEBUG: ADD RECORD TO VOYAGER"
+Else
+    With SourceRecord
+        BibID = 0
+        BibRC = GL.BatchCat.AddBibRecord( _
+            .BibRecord.MarcRecordOut, _
+            LIB_ID, _
+            GL.CatLocID, _
+            False _
+        )
+        If BibRC = abSuccess Then
+            BibID = GL.BatchCat.RecordIDAdded
+            WriteLog GL.Logfile, "Added Voyager bib: " & BibID
+            
+            HolID = 0
+            HolLoc = GetLoc("in")   'All of these are Internet holdings
+            HolRC = GL.BatchCat.AddHoldingRecord( _
+                .HoldingsRecords(1).HolRecord.MarcRecordOut, _
+                BibID, _
+                GL.CatLocID, _
+                False, _
+                HolLoc.LocID _
+            )
+            If HolRC = ahSuccess Then
+                HolID = GL.BatchCat.RecordIDAdded
+                WriteLog GL.Logfile, vbTab & "Added Voyager hol: " & HolID
+            Else
+                WriteLog GL.Logfile, "ERROR adding holdings record - return code: " & HolRC
+            End If
+        Else
+            WriteLog GL.Logfile, "ERROR adding bib record - return code: " & BibRC
+        End If  'Add bib record
+    End With 'SourceRecord
+End If
+End Sub
