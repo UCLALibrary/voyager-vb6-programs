@@ -85,7 +85,7 @@ DBUG = True
             If SourceRecord.BibMatchCount = 1 Then
                 'Voyager record will be updated, though Voyager records may also be written to a review file.
                 PrepareForUpdate SourceRecord
-                'UpdateVoyager SourceRecord
+                UpdateVoyager SourceRecord
             Else
                 AddRecord SourceRecord
             End If
@@ -239,8 +239,17 @@ Private Sub PrepareRecord(SourceRecord As OclcRecordType)
             .ChangeLeaderValue 17, " "
         End If
         
-        'Create 910
-        .FldAddGeneric "910", "  ", .SfdMake("a", "BATCHCAT " & Format(Now(), "yymmdd")), 3
+        'Create 910 if none exists, else modify existing one with date
+        .FldFindFirst "910"
+        If .FldWasFound Then
+            'Add date to $a; cataloger's responsibility to send 910 without date
+            .SfdFindFirst "a"
+            If .SfdWasFound Then
+                .SfdText = .SfdText & " " & Format(Now(), "yymmdd")
+            End If
+        Else
+            .FldAddGeneric "910", "  ", .SfdMake("a", "BATCHCAT " & Format(Now(), "yymmdd")), 3
+        End If
         
         'Add date to 948: Assume there's just one
         'Specs say there'll be a $d; put the $c before it
@@ -719,6 +728,8 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
         Else
             WriteLog GL.Logfile, "ERROR: Bib #" & BibID & " could not be updated; returncode: " & UpdateBibRC
         End If
+    Else
+        WriteLog GL.Logfile, "DEBUG: UPDATE BIB RECORD IN VOYAGER"
     End If
 
 End Sub
@@ -803,39 +814,39 @@ Private Sub AddRecord(SourceRecord As OclcRecordType)
     Dim HolID As Long
     Dim HolLoc As LocationType
     
-If DBUG Then
-    WriteLog GL.Logfile, "DEBUG: ADD RECORD TO VOYAGER"
-Else
-    With SourceRecord
-        BibID = 0
-        BibRC = GL.BatchCat.AddBibRecord( _
-            .BibRecord.MarcRecordOut, _
-            LIB_ID, _
-            GL.CatLocID, _
-            False _
-        )
-        If BibRC = abSuccess Then
-            BibID = GL.BatchCat.RecordIDAdded
-            WriteLog GL.Logfile, "Added Voyager bib: " & BibID
-            
-            HolID = 0
-            HolLoc = GetLoc("in")   'All of these are Internet holdings
-            HolRC = GL.BatchCat.AddHoldingRecord( _
-                .HoldingsRecords(1).HolRecord.MarcRecordOut, _
-                BibID, _
+    If GL.ProductionMode Then
+        With SourceRecord
+            BibID = 0
+            BibRC = GL.BatchCat.AddBibRecord( _
+                .BibRecord.MarcRecordOut, _
+                LIB_ID, _
                 GL.CatLocID, _
-                False, _
-                HolLoc.LocID _
+                False _
             )
-            If HolRC = ahSuccess Then
-                HolID = GL.BatchCat.RecordIDAdded
-                WriteLog GL.Logfile, vbTab & "Added Voyager hol: " & HolID
+            If BibRC = abSuccess Then
+                BibID = GL.BatchCat.RecordIDAdded
+                WriteLog GL.Logfile, "Added Voyager bib: " & BibID
+                
+                HolID = 0
+                HolLoc = GetLoc("in")   'All of these are Internet holdings
+                HolRC = GL.BatchCat.AddHoldingRecord( _
+                    .HoldingsRecords(1).HolRecord.MarcRecordOut, _
+                    BibID, _
+                    GL.CatLocID, _
+                    False, _
+                    HolLoc.LocID _
+                )
+                If HolRC = ahSuccess Then
+                    HolID = GL.BatchCat.RecordIDAdded
+                    WriteLog GL.Logfile, vbTab & "Added Voyager hol: " & HolID
+                Else
+                    WriteLog GL.Logfile, "ERROR adding holdings record - return code: " & HolRC
+                End If
             Else
-                WriteLog GL.Logfile, "ERROR adding holdings record - return code: " & HolRC
-            End If
-        Else
-            WriteLog GL.Logfile, "ERROR adding bib record - return code: " & BibRC
-        End If  'Add bib record
-    End With 'SourceRecord
-End If
+                WriteLog GL.Logfile, "ERROR adding bib record - return code: " & BibRC
+            End If  'Add bib record
+        End With 'SourceRecord
+    Else
+        WriteLog GL.Logfile, "DEBUG: ADD BIB RECORD TO VOYAGER"
+    End If
 End Sub
