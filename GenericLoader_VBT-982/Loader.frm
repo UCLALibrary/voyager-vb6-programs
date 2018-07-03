@@ -53,6 +53,8 @@ Private Sub ProcessRecords()
     Dim RawRecord As String
     Dim RecordNumber As Integer
     Dim F001 As String
+    Dim BibID As Long
+    Dim HolID As Long
     
     RecordNumber = 0
     MarcFile.OpenFile GL.InputFilename
@@ -85,8 +87,16 @@ DBUG = True
             If SourceRecord.BibMatchCount = 1 Then
                 'Voyager record will be updated, though Voyager records may also be written to a review file.
                 PrepareForUpdate SourceRecord
+                'Update bib
                 UpdateVoyager SourceRecord
+                'Add internet holdings, if there isn't one already
+                BibID = CLng(SourceRecord.BibMatches(1))    'Why? because BibMatches is String for some ancient reason
+                HolID = GetInternetHoldingsID(BibID)
+                If HolID = 0 Then
+                    AddHolRecord BibID, SourceRecord.HoldingsRecords(1)
+                End If
             Else
+                'Add bib and holdings
                 AddRecord SourceRecord
             End If
         End If 'OkToUpdate
@@ -360,7 +370,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
     Dim LogMessage As String
     Dim OclcCount As Integer
     Dim SearchNumber As String
-    Dim SQL As String
+    Dim sql As String
     Dim rs As Integer 'RecordSet
     
     ReDim SourceRecord.BibMatches(1 To MAX_BIB_MATCHES)
@@ -371,7 +381,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
         SearchNumber = UCase(CalculateUcoclc(SourceRecord.OclcNumbers(OclcCount)))
         
         'Find Voyager bibs with 035 $a OCLC number matching incoming OCLC number
-        SQL = _
+        sql = _
             "select bi.bib_id " & _
             "from bib_index bi " & _
             "inner join bib_text bt " & _
@@ -381,7 +391,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
             "order by bi.bib_id"
             
         With GL.Vger
-            .ExecuteSQL SQL, rs
+            .ExecuteSQL sql, rs
             Do While .GetNextRow
                 With SourceRecord
                     BibID = GL.Vger.CurrentRow(rs, 1)
@@ -666,6 +676,11 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
                 '590
                 Case "590"
                     AddField = True
+                '655 (2nd indicator 7 only)
+                Case "655"
+                    If .FldInd2 = "7" Then
+                        AddField = True
+                    End If
                 '793
                 Case "793"
                     AddField = True
@@ -809,10 +824,7 @@ Private Sub AddRecord(SourceRecord As OclcRecordType)
     'Add the bib and holdings record associated with SourceRecord to Voyager
     Const LIB_ID As Long = 1
     Dim BibRC As AddBibReturnCode
-    Dim HolRC As AddHoldingReturnCode
     Dim BibID As Long
-    Dim HolID As Long
-    Dim HolLoc As LocationType
     
     If GL.ProductionMode Then
         With SourceRecord
@@ -826,22 +838,7 @@ Private Sub AddRecord(SourceRecord As OclcRecordType)
             If BibRC = abSuccess Then
                 BibID = GL.BatchCat.RecordIDAdded
                 WriteLog GL.Logfile, "Added Voyager bib: " & BibID
-                
-                HolID = 0
-                HolLoc = GetLoc("in")   'All of these are Internet holdings
-                HolRC = GL.BatchCat.AddHoldingRecord( _
-                    .HoldingsRecords(1).HolRecord.MarcRecordOut, _
-                    BibID, _
-                    GL.CatLocID, _
-                    False, _
-                    HolLoc.LocID _
-                )
-                If HolRC = ahSuccess Then
-                    HolID = GL.BatchCat.RecordIDAdded
-                    WriteLog GL.Logfile, vbTab & "Added Voyager hol: " & HolID
-                Else
-                    WriteLog GL.Logfile, "ERROR adding holdings record - return code: " & HolRC
-                End If
+                AddHolRecord BibID, .HoldingsRecords(1)
             Else
                 WriteLog GL.Logfile, "ERROR adding bib record - return code: " & BibRC
             End If  'Add bib record
@@ -850,3 +847,52 @@ Private Sub AddRecord(SourceRecord As OclcRecordType)
         WriteLog GL.Logfile, "DEBUG: ADD BIB RECORD TO VOYAGER"
     End If
 End Sub
+
+Private Sub AddHolRecord(BibID As Long, HoldingsRecord As HoldingsRecordType)
+    Dim HolRC As AddHoldingReturnCode
+    Dim HolID As Long
+    Dim HolLoc As LocationType
+    
+    If GL.ProductionMode Then
+        HolID = 0
+        HolLoc = GetLoc("in")   'All of these are Internet holdings
+        HolRC = GL.BatchCat.AddHoldingRecord( _
+            HoldingsRecord.HolRecord.MarcRecordOut, _
+            BibID, _
+            GL.CatLocID, _
+            False, _
+            HolLoc.LocID _
+        )
+        If HolRC = ahSuccess Then
+            HolID = GL.BatchCat.RecordIDAdded
+            WriteLog GL.Logfile, vbTab & "Added Voyager hol: " & HolID
+        Else
+            WriteLog GL.Logfile, "ERROR adding holdings record - return code: " & HolRC
+        End If
+    Else
+        WriteLog GL.Logfile, "DEBUG: ADD HOL RECORD TO VOYAGER"
+    End If
+End Sub
+
+Private Function GetInternetHoldingsID(BibID As Long) As Long
+    Dim rs As Integer 'Recordset
+    Dim HolID As Long
+    Dim sql As String
+    sql = _
+        "select coalesce(max(mm.mfhd_id), 0) as mfhd_id " & vbCrLf & _
+        "from location l " & vbCrLf & _
+        "inner join mfhd_master mm on l.location_id = mm.location_id " & vbCrLf & _
+        "inner join bib_mfhd bm on mm.mfhd_id = bm.mfhd_id " & vbCrLf & _
+        "where l.location_code = 'in' " & vbCrLf & _
+        "and bm.bib_id = " & BibID
+
+    rs = GL.GetRS
+    With GL.Vger
+        .ExecuteSQL sql, rs
+        'There will always be one row
+        .GetNextRow
+        HolID = .CurrentRow(rs, 1)
+    End With
+    
+    GetInternetHoldingsID = HolID
+End Function
