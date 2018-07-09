@@ -60,50 +60,48 @@ Private Sub ProcessRecords()
     MarcFile.OpenFile GL.InputFilename
     Do While MarcFile.ReadNextRecord(RawRecord)
         RecordNumber = RecordNumber + 1
-        Set MarcRecord = New Utf8MarcRecordClass
-        With MarcRecord
-            .CharacterSetIn = "U"   'Hooray, UTF-8 from OCLC
-            .CharacterSetOut = "U"
-            .IgnoreSfdOrder = True
-            .MarcRecordIn = RawRecord
-            F001 = GetOclcNumberFrom001(MarcRecord)
-        End With
-        Set SourceRecord.BibRecord = MarcRecord
-        SourceRecord.PositionInFile = RecordNumber
-        
-        'Start of log entry for record
-        'Subsequent functions may also write log messages for current record.
-        WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
-        
-'Tempoarily disable debugging
-DBUG = False
-        PrepareRecord SourceRecord
-        GetOclcNumbers SourceRecord
-        SearchVoyager SourceRecord
-
-DBUG = True
-        'Multiple matches get rejected, so there must be 0 or 1 matches if OK
-        If OkToUpdate(SourceRecord) Then
-            If SourceRecord.BibMatchCount = 1 Then
-                'Voyager record will be updated, though Voyager records may also be written to a review file.
-                PrepareForUpdate SourceRecord
-                'Update bib
-                UpdateVoyager SourceRecord
-                'Add internet holdings, if there isn't one already
-                BibID = CLng(SourceRecord.BibMatches(1))    'Why? because BibMatches is String for some ancient reason
-                HolID = GetInternetHoldingsID(BibID)
-                If HolID = 0 Then
-                    AddHolRecord BibID, SourceRecord.HoldingsRecords(1)
-                End If
-            Else
-                'Add bib and holdings
-                AddRecord SourceRecord
-            End If
-        End If 'OkToUpdate
-        
-        'End of log entry for record
-        WriteLog GL.Logfile, ""
+        If RecordNumber >= GL.StartRec Then
+            Set MarcRecord = New Utf8MarcRecordClass
+            With MarcRecord
+                .CharacterSetIn = "U"   'Hooray, UTF-8 from OCLC
+                .CharacterSetOut = "U"
+                .IgnoreSfdOrder = True
+                .MarcRecordIn = RawRecord
+                F001 = GetOclcNumberFrom001(MarcRecord)
+            End With
+            Set SourceRecord.BibRecord = MarcRecord
+            SourceRecord.PositionInFile = RecordNumber
+            
+            'Start of log entry for record
+            'Subsequent functions may also write log messages for current record.
+            WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
+            
+            PrepareRecord SourceRecord
+            GetOclcNumbers SourceRecord
+            SearchVoyager SourceRecord
     
+            'Multiple matches get rejected, so there must be 0 or 1 matches if OK
+            If OkToUpdate(SourceRecord) Then
+                If SourceRecord.BibMatchCount = 1 Then
+                    'Voyager record will be updated, though Voyager records may also be written to a review file.
+                    PrepareForUpdate SourceRecord
+                    'Update bib
+                    UpdateVoyager SourceRecord
+                    'Add internet holdings, if there isn't one already
+                    BibID = CLng(SourceRecord.BibMatches(1))    'Why? because BibMatches is String for some ancient reason
+                    HolID = GetInternetHoldingsID(BibID)
+                    If HolID = 0 Then
+                        AddHolRecord BibID, SourceRecord.HoldingsRecords(1)
+                    End If
+                Else
+                    'Add bib and holdings
+                    AddRecord SourceRecord
+                End If
+            End If 'OkToUpdate
+            
+            'End of log entry for record
+            WriteLog GL.Logfile, ""
+        End If
     Loop 'MarcFile.ReadNextRecord
     
 End Sub
@@ -338,8 +336,6 @@ Private Sub GetOclcNumbers(SourceRecord As OclcRecordType)
     Dim OclcCount As Integer
     ReDim SourceRecord.OclcNumbers(1 To MAX_OCLC_COUNT)
     OclcCount = 0
-'Tempoarily enable debugging
-DBUG = True
     
     With SourceRecord.BibRecord
         .FldFindFirst "035"
@@ -370,7 +366,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
     Dim LogMessage As String
     Dim OclcCount As Integer
     Dim SearchNumber As String
-    Dim sql As String
+    Dim SQL As String
     Dim rs As Integer 'RecordSet
     
     ReDim SourceRecord.BibMatches(1 To MAX_BIB_MATCHES)
@@ -381,7 +377,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
         SearchNumber = UCase(CalculateUcoclc(SourceRecord.OclcNumbers(OclcCount)))
         
         'Find Voyager bibs with 035 $a OCLC number matching incoming OCLC number
-        sql = _
+        SQL = _
             "select bi.bib_id " & _
             "from bib_index bi " & _
             "inner join bib_text bt " & _
@@ -391,7 +387,7 @@ Private Sub SearchVoyager(SourceRecord As OclcRecordType)
             "order by bi.bib_id"
             
         With GL.Vger
-            .ExecuteSQL sql, rs
+            .ExecuteSQL SQL, rs
             Do While .GetNextRow
                 With SourceRecord
                     BibID = GL.Vger.CurrentRow(rs, 1)
@@ -877,8 +873,8 @@ End Sub
 Private Function GetInternetHoldingsID(BibID As Long) As Long
     Dim rs As Integer 'Recordset
     Dim HolID As Long
-    Dim sql As String
-    sql = _
+    Dim SQL As String
+    SQL = _
         "select coalesce(max(mm.mfhd_id), 0) as mfhd_id " & vbCrLf & _
         "from location l " & vbCrLf & _
         "inner join mfhd_master mm on l.location_id = mm.location_id " & vbCrLf & _
@@ -888,7 +884,7 @@ Private Function GetInternetHoldingsID(BibID As Long) As Long
 
     rs = GL.GetRS
     With GL.Vger
-        .ExecuteSQL sql, rs
+        .ExecuteSQL SQL, rs
         'There will always be one row
         .GetNextRow
         HolID = .CurrentRow(rs, 1)
