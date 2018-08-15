@@ -101,6 +101,8 @@ Private Sub ProcessRecords()
             
             'End of log entry for record
             WriteLog GL.Logfile, ""
+            NiceSleep GL.Interval
+            DoEvents
         End If
     Loop 'MarcFile.ReadNextRecord
     
@@ -672,11 +674,6 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
                 '590
                 Case "590"
                     AddField = True
-                '655 (2nd indicator 7 only)
-                Case "655"
-                    If .FldInd2 = "7" Then
-                        AddField = True
-                    End If
                 '793
                 Case "793"
                     AddField = True
