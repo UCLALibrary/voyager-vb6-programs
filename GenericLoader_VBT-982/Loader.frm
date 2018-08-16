@@ -36,7 +36,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-    'GL.Init "-f " & App.Path & "\test.mrc -i 0"
+    '''''GL.Init "-f " & App.Path & "\nsc.mrc -i 0"
     
     DBUG = Not GL.ProductionMode
     
@@ -886,6 +886,8 @@ Private Function GetInternetHoldingsID(BibID As Long) As Long
         .GetNextRow
         HolID = .CurrentRow(rs, 1)
     End With
+    
+    GL.FreeRS rs
     
     GetInternetHoldingsID = HolID
 End Function
