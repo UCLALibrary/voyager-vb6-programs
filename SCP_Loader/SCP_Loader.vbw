@@ -1,4 +1,4 @@
-Loader = 0, 0, 1906, 977, Z, 22, 29, 799, 654, C
+Loader = 0, 0, 1906, 977, , 22, 29, 799, 654, C
 Utf8CharClass = 88, 116, 1380, 863, C
 Utf8MarcFileClass = 154, 203, 931, 828, C
 Utf8MarcRecordClass = 268, 37, 1733, 872, C

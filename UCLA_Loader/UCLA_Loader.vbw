@@ -1,6 +1,6 @@
 Loader = 98, -4, 1710, 908, , 22, 29, 834, 620, C
 API32 = 0, 0, 0, 0, C
-GeneralRoutines = 198, 261, 975, 873, C
+GeneralRoutines = 198, 261, 975, 873, Z
 Ini = 44, 58, 821, 683, C
 Globals = 132, 174, 909, 799, C
 GeneralTypes = 0, 0, 0, 0, C
