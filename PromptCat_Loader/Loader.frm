@@ -30,7 +30,6 @@ Private CatLocID As Long            'Cataloging Location ID
 Private Sub Form_Load()
     'Main handles everything
     Main
-'   Test
     'Exit from VB if running as program
     End
 End Sub
@@ -571,17 +570,31 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
         .FldFindFirst "9"
         Do While .FldWasFound
             Select Case .FldTag
+                Case "910"
+                    'Delete all 910s except for those with $a gobioclcplus
+                    .SfdFindFirst "a"
+                    If .SfdWasFound Then
+                        If InStr(1, .SfdText, "gobioclcplus", vbTextCompare) = 0 Then
+                            .FldDelete
+                        End If
+                    Else
+                        'Bad 910, no $a, delete it
+                        .FldDelete
+                    End If
                 Case "936", "949", "987"
                     'Do nothing - we're keeping these
-                    'For PromptCat records, change the incoming 910 (below)
                     '949 not used for matching PromptCat records - see below for 024
                 Case Else
                     .FldDelete
             End Select
             .FldFindNext
         Loop '9XX
-    
-        .FldAddGeneric "910", "  ", .SfdMake("a", "PromptCat " & DateToYYMMDD(Now())), 3
+        
+        'Now add generic 910, if we didn't save one above
+        .FldFindFirst "910"
+        If Not .FldWasFound Then
+            .FldAddGeneric "910", "  ", .SfdMake("a", "PromptCat " & DateToYYMMDD(Now())), 3
+        End If
     
         'First 024 __ $a will be used for matching against existing records
         'Ignore 024 with other indicators (typically 3_ ISBN-13)
