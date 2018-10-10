@@ -132,7 +132,7 @@ Private Function FindBibForOCLC(OCLC As String) As Long
     
     Dim result As Long
     Dim BibID As Long
-    Dim sql As String
+    Dim SQL As String
     Dim rs As Integer
     Dim cnt As Integer
     
@@ -140,7 +140,7 @@ Private Function FindBibForOCLC(OCLC As String) As Long
     cnt = 0
     BibID = 0
     result = 0
-    sql = _
+    SQL = _
         "SELECT Bib_ID " & _
         "FROM bib_index " & _
         "WHERE index_code = '0350' " & _
@@ -148,7 +148,7 @@ Private Function FindBibForOCLC(OCLC As String) As Long
         "ORDER BY Bib_ID"
 
     With GL.Vger
-        .ExecuteSQL sql, rs
+        .ExecuteSQL SQL, rs
         Do While True
             If Not .GetNextRow Then
                 Exit Do
@@ -209,7 +209,7 @@ Private Function HasOnlyInternetHoldings(BibID As Long) As Boolean
     ' Return true if bib record has internet holdings, and no others
     ' Else returns false (no internet, or has non-internet)
     Dim result As Boolean
-    Dim sql As String
+    Dim SQL As String
     Dim rs As Integer
     Dim Internet_cnt As Integer
     Dim NonInternet_cnt As Integer
@@ -218,7 +218,7 @@ Private Function HasOnlyInternetHoldings(BibID As Long) As Boolean
     Internet_cnt = 0
     NonInternet_cnt = 0
     
-    sql = _
+    SQL = _
         "WITH mfhds AS ( " & vbCrLf & _
             "SELECT mm.mfhd_id, l.location_code " & vbCrLf & _
             "FROM bib_mfhd bm " & vbCrLf & _
@@ -233,7 +233,7 @@ Private Function HasOnlyInternetHoldings(BibID As Long) As Boolean
 
     rs = GL.GetRS
     With GL.Vger
-        .ExecuteSQL sql, rs
+        .ExecuteSQL SQL, rs
         If .GetNextRow Then
             Internet_cnt = .CurrentRow(rs, 1)
             NonInternet_cnt = .CurrentRow(rs, 2)
@@ -255,7 +255,11 @@ Private Function Scp599cIsNewer(Scp599 As String, Vgr599 As String) As Boolean
     
     If (Scp599 <> "") And (Vgr599 <> "") And (Scp599 > Vgr599) Then
         result = True
+    '20181009: Also treat records with no Voyager 599 $c as older than SCP deletion candidates
+    ElseIf (Scp599 <> "") And (Vgr599 = "") Then
+        result = True
     End If
+    
     Scp599cIsNewer = result
 End Function
 
