@@ -38,7 +38,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-'GL.Init "-t ucladb -f " & App.Path & "\foo.mrc"
+'GL.Init "-t ucladb -f " & App.Path & "\bsr-Cak000a.060.mrc"
 
     CatLocID = GL.CatLocID
     ReDim OclcRecords(1 To MAX_RECORD_COUNT) As OclcRecordType  '2000 should be plenty
@@ -288,9 +288,19 @@ Private Sub LoadRecords(OclcRecords() As OclcRecordType)
         Rewrite049 OclcRecord
         Parse049 OclcRecord
         BuildHoldings OclcRecord
-        SearchDB OclcRecord
+        'Different search based on record source
+        If IsCasaliniRecord(OclcRecord.BibRecord) = True Then
+            SearchDB_Casalini OclcRecord
+        Else
+            SearchDB OclcRecord
+        End If
         With OclcRecord
-            Message = "Record #" & OclcCnt & ": Incoming record OCLC# " & .OclcNumbers(1)
+            'Customize log message based on record source
+            If IsCasaliniRecord(OclcRecord.BibRecord) = True Then
+                Message = "Record #" & OclcCnt & ": Incoming record Casalini# " & .OclcNumbers(1)
+            Else
+                Message = "Record #" & OclcCnt & ": Incoming record OCLC# " & .OclcNumbers(1)
+            End If
             'Load new-to-file: NOT done for PromptCat (all bib records should already be in Voyager)
             If .BibMatchCount = 0 Then
                 WriteLog GL.Logfile, Message & " : no match found"
@@ -406,14 +416,17 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
 
     Set MarcRecord = RecordIn.BibRecord
     With MarcRecord
-        'PromptCat records: low-quality PromptCat Data Records (PDRs) have 035 $a(OCLC)nnnnnnn; remove
-        .FldFindFirst "035"
-        Do While .FldWasFound
-            If InStr(1, .FldText, "(OCLC)", vbTextCompare) > 0 Then
-                .FldDelete
-            End If
-            .FldFindNext
-        Loop
+        'PromptCat records: low-quality PromptCat Data Records (PDRs) have 035 $a(OCLC)nnnnnnn; remove those
+        'However, leave 035 OCLC fields in Casalini records as that's the only OCLC info
+        If IsCasaliniRecord(MarcRecord) = False Then
+            .FldFindFirst "035"
+            Do While .FldWasFound
+                If InStr(1, .FldText, "(OCLC)", vbTextCompare) > 0 Then
+                    .FldDelete
+                End If
+                .FldFindNext
+            Loop
+        End If
         
         If .FldFindFirst("001") Then
             If IsOclcNumber(.FldText) Then
@@ -458,13 +471,16 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
         
         '2006-12-15: OCLC is now providing 035 fields with $a $z, but not 0-padded
         'Remove OCLC-provided 035 since ours are better
-        .FldFindFirst "035"
-        Do While .FldWasFound
-            If InStr(1, .FldText, "(OCoLC)", vbTextCompare) > 0 Then
-                .FldDelete
-            End If
-            .FldFindNext
-        Loop
+        'However, leave 035 OCLC fields in Casalini records as that's the only OCLC info
+        If IsCasaliniRecord(MarcRecord) = False Then
+            .FldFindFirst "035"
+            Do While .FldWasFound
+                If InStr(1, .FldText, "(OCoLC)", vbTextCompare) > 0 Then
+                    .FldDelete
+                End If
+                .FldFindNext
+            Loop
+        End If
         
         'Now add our new 035 field
         .FldAddGeneric "035", "  ", f035, 3
@@ -1267,7 +1283,7 @@ Private Sub SearchDB(RecordIn As OclcRecordType)
     
     RecordIn.BibMatchCount = 0
     ReDim RecordIn.BibMatches(1 To MAX_BIB_MATCHES)
-    
+
     With RecordIn.BibRecord
         oclcnum = RecordIn.OclcNumbers(1)
         isbn = ""
@@ -1312,6 +1328,100 @@ Private Sub SearchDB(RecordIn As OclcRecordType)
                 .FldFindNext
             Loop '020
         End If 'pubnum
+    End With 'RecordIn.BibRecord
+    
+    With GL.Vger
+        .ExecuteSQL SQL, rs
+        Do While .GetNextRow(rs)
+            BibID = CLng(.CurrentRow(rs, 1))
+            With RecordIn
+                AlreadyExists = False
+                For cnt = 1 To .BibMatchCount
+                    If BibID = .BibMatches(cnt) Then
+                        AlreadyExists = True
+                    End If
+                Next
+                If AlreadyExists = False Then
+                    .BibMatchCount = .BibMatchCount + 1
+                    .BibMatches(.BibMatchCount) = BibID
+'Debug.Print BibID, .BibMatchCount
+                End If
+            End With 'RecordIn
+        Loop
+    End With
+    
+    With RecordIn
+        If .BibMatchCount > 0 Then
+            ReDim Preserve .BibMatches(1 To .BibMatchCount)
+        End If
+    End With
+    
+    GL.FreeRS rs
+End Sub
+
+Private Sub SearchDB_Casalini(RecordIn As OclcRecordType)
+    'Searches Voyager for records matching the incoming record on various keys
+    'Modifies RecordIn: places all matching Voyager BibIDs in RecordIn.BibMatches, with total count in .BibMatchCount for convenience
+    'Casalini variant of SearchDB: searches only for ISBN, without tying to 024 pubnum
+    'Also searches for OCLC number, from 035 with $a(OCoLC).
+    'These records can have OCLC, ISBN, or both.....
+    
+    Dim isbn As String
+    Dim oclc As String
+    Dim valfound As Boolean
+    
+    Dim SQL As String
+    
+    Dim OclcCnt As Integer
+    Dim BibID As String
+    Dim rs As Integer
+    Dim cnt As Integer
+    Dim AlreadyExists As Boolean
+    
+    rs = GL.GetRS
+    
+    RecordIn.BibMatchCount = 0
+    ReDim RecordIn.BibMatches(1 To MAX_BIB_MATCHES)
+
+    With RecordIn.BibRecord
+        isbn = ""
+        'Start with always-false placeholder, then add possibly-true conditions with OR, below
+        SQL = "SELECT DISTINCT bib_id FROM bib_index WHERE 1=0 "
+        
+        'Add a search condition for each ISBN (020 $a)
+        .FldFindFirst "020"
+        Do While .FldWasFound = True
+            .SfdFindFirst "a"
+            If .SfdWasFound = True Then
+                'Utf8MarcRecordClass.NormalizeStandardNumber doesn't remove non-ISBN portions of 020 $a
+                'So, find first "word" (everything before first space, or whole subfield if no spaces) in 020 $a and normalize it
+                isbn = .SfdText
+                If InStr(1, isbn, " ") > 0 Then
+                    isbn = Mid(isbn, 1, InStr(1, isbn, " ") - 1)
+                End If
+                isbn = .NormalizeStandardNumber("020", isbn)
+                If Len(isbn) = 10 Or Len(isbn) = 13 Then
+                    SQL = SQL & "OR (index_code = '020N' AND normal_heading = '" & isbn & "') "
+                End If
+            End If
+            .FldFindNext
+        Loop '020
+    
+        'Add a search condition for the OCLC 035 $a (if present)
+        'Can't use RecordIn.OclcNumbers() as that's probably just the Casalini number from the 001
+        oclc = ""
+        .FldFindFirst "035"
+        Do While .FldWasFound
+            'Look for the ucoclc number created (if relevant) in PreprocessRecord
+            .SfdFindFirst "a"
+            If .SfdWasFound Then
+                If InStr(1, .SfdText, "ucoclc", vbTextCompare) > 0 Then
+                    oclc = UCase(.SfdText)
+                    SQL = SQL & "OR (index_code = '0350' AND normal_heading = '" & oclc & "') "
+                End If
+            End If
+            .FldFindNext
+        Loop
     End With 'RecordIn.BibRecord
     
     With GL.Vger
@@ -2003,4 +2113,28 @@ Private Function ElvlAllowsOverlay(OclcElvl As String, VgerElvl As String) As Bo
         End Select
     End If
     ElvlAllowsOverlay = OkToReplace
+End Function
+
+Private Function IsCasaliniRecord(BibRecord As Utf8MarcRecordClass) As Boolean
+    'Determine if record comes from Casalini Libri, as opposed to the normal YBP PromptCat
+    'Casalini records initially have 003 field with ItFiC, though that gets moved to 035 during pre-processing.
+    'Most consistent check: all records seem to have 040 $aItFiC
+    
+    Dim result As Boolean
+    'Assume this is not a Casalini record
+    result = False
+    With BibRecord
+        .FldFindFirst "040"
+        '040 is not repeatable; $a is not repeatable within 040
+        If .FldWasFound Then
+            .SfdFindFirst "a"
+            If .SfdWasFound Then
+                If .SfdText = "ItFiC" Then
+                    result = True
+                End If
+            End If
+        End If
+        
+    End With
+    IsCasaliniRecord = result
 End Function
