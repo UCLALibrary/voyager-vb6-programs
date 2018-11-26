@@ -23,7 +23,6 @@ Option Explicit
 
 Private DBUG As Boolean
 Private Const ERROR_BAR As String = "*** ERROR ***"
-Private Const MAX_RECORD_COUNT As Integer = 3000
 
 Private Sub Form_Load()
     'Main handles everything
@@ -51,46 +50,48 @@ Private Sub ProcessRecords()
     Dim MarcRecord As New Utf8MarcRecordClass
     Dim WcmRecord As OclcRecordType
     Dim RawRecord As String
-    Dim RecordNumber As Integer
+    Dim RecordNumber As Long
     Dim F001 As String
     
     RecordNumber = 0
     MarcFile.OpenFile GL.InputFilename
     Do While MarcFile.ReadNextRecord(RawRecord)
         RecordNumber = RecordNumber + 1
-        Set MarcRecord = New Utf8MarcRecordClass
-        With MarcRecord
-            .CharacterSetIn = "U"   'Hooray, UTF-8 from OCLC
-            .CharacterSetOut = "U"
-            .IgnoreSfdOrder = True
-            .MarcRecordIn = RawRecord
-            F001 = GetOclcNumberFrom001(MarcRecord)
-        End With
-        Set WcmRecord.BibRecord = MarcRecord
-        WcmRecord.PositionInFile = RecordNumber
-        
-        'Start of log entry for record
-        'Subsequent functions may also write log messages for current record.
-        WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
-        
-        If RecordIsWanted(WcmRecord) Then
-            PrepareRecord WcmRecord
-            GetOclcNumbers WcmRecord
-            SearchVoyager WcmRecord
+        If RecordNumber >= GL.StartRec Then
+            Set MarcRecord = New Utf8MarcRecordClass
+            With MarcRecord
+                .CharacterSetIn = "U"   'Hooray, UTF-8 from OCLC
+                .CharacterSetOut = "U"
+                .IgnoreSfdOrder = True
+                .MarcRecordIn = RawRecord
+                F001 = GetOclcNumberFrom001(MarcRecord)
+            End With
+            Set WcmRecord.BibRecord = MarcRecord
+            WcmRecord.PositionInFile = RecordNumber
             
-            If OkToUpdate(WcmRecord) Then
-                'Voyager record will be updated, though Voyager records may also be written to a review file.
-                PrepareForUpdate WcmRecord
-                UpdateVoyager WcmRecord
-            End If 'OkToUpdate
-        
-        Else
-            'Record is not wanted so reject it
-            WriteRejectRecord WcmRecord
-        End If 'RecordIsWanted
-        
-        'End of log entry for record
-        WriteLog GL.Logfile, ""
+            'Start of log entry for record
+            'Subsequent functions may also write log messages for current record.
+            WriteLog GL.Logfile, "Record #" & RecordNumber & ": Incoming record OCLC# " & F001
+            
+            If RecordIsWanted(WcmRecord) Then
+                PrepareRecord WcmRecord
+                GetOclcNumbers WcmRecord
+                SearchVoyager WcmRecord
+                
+                If OkToUpdate(WcmRecord) Then
+                    'Voyager record will be updated, though Voyager records may also be written to a review file.
+                    PrepareForUpdate WcmRecord
+                    UpdateVoyager WcmRecord
+                End If 'OkToUpdate
+            
+            Else
+                'Record is not wanted so reject it
+                WriteRejectRecord WcmRecord
+            End If 'RecordIsWanted
+            
+            'End of log entry for record
+            WriteLog GL.Logfile, ""
+        End If
     
     Loop 'MarcFile.ReadNextRecord
     
