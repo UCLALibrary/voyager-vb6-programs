@@ -37,8 +37,8 @@ Sub SplitFile()
         'MarcRecordOut automatically changes LDR/22-23 to "00"
         'It also appears to trim leading/trailing space from non-control fields (010 & higher)
         With MarcRecord
-            .CharacterSetIn = "M"
-            .CharacterSetOut = "M"
+            .CharacterSetIn = "U"
+            .CharacterSetOut = "U"
             .IgnoreSfdOrder = True
             .MarcRecordIn = RawRecord
             
