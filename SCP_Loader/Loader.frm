@@ -45,7 +45,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-'    GL.Init "-t ucla_testdb -f " & App.Path & "\scp_599.mrc"
+'    GL.Init "-t ucla_testdb -f " & App.Path & "\bad_880.mrc"
     
     ReDim NewMonos(1 To RECORD_ARRAY_INCREMENT) As OclcRecordType
     ReDim NewSerials(1 To RECORD_ARRAY_INCREMENT) As OclcRecordType
@@ -918,7 +918,7 @@ Private Sub SearchDB(RecordIn As OclcRecordType)
         "ORDER BY Bib_ID"
     
     With GL.Vger
-Debug.Print "Searchnumber: " & SearchNumber
+'Debug.Print "Searchnumber: " & SearchNumber
         .ExecuteSQL SQL, rs
         Do While True
             If Not .GetNextRow Then
@@ -935,7 +935,7 @@ Debug.Print "Searchnumber: " & SearchNumber
                 If AlreadyExists = False Then
                     .BibMatchCount = .BibMatchCount + 1
                     .BibMatches(.BibMatchCount) = BibID
-Debug.Print "Found bibid: " & BibID
+'Debug.Print "Found bibid: " & BibID
                 End If
             End With
         Loop
@@ -1182,8 +1182,8 @@ Private Function ReplaceBibRecord(RecordIn As OclcRecordType, BibID As Long) As 
         '2012-04-24: SCP now supplies Unicode records
         .CharacterSetIn = "U"
         .IgnoreSfdOrder = True
-        .MarcRecordIn = RecordIn.BibRecord.MarcRecordOut
         .CharacterSetOut = "U"
+        .MarcRecordIn = RecordIn.BibRecord.MarcRecordOut
     End With
 
     Set VgerBib = GetVgerBibRecord(CStr(BibID))     'this method requires String, not Long
