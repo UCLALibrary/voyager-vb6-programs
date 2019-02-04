@@ -38,7 +38,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-'GL.Init "-t ucladb -f " & App.Path & "\bsr-Cak000a.060.mrc"
+'GL.Init "-t ucladb -f " & App.Path & "\foo.mrc"
 
     CatLocID = GL.CatLocID
     ReDim OclcRecords(1 To MAX_RECORD_COUNT) As OclcRecordType  '2000 should be plenty
@@ -640,6 +640,7 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
     'Assumes incoming 049 is in above structure
     'Rewrites 049 so Parse049 can handle it: $a CLUR $l [designation1] barcode1 $l [designation2] barcode2 etc.
     '20090617 akohler: for College Approvals, temporarily adding $o to input file in phase 1 load; need to preserve it here
+    '20190204 akohler: Add support for 049 $n notes, optional subfield in each $a group
         
     Dim F049_new As String
     Dim NewSfdCode As String
@@ -664,6 +665,9 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
                         F049_new = F049_new & .SfdMake(NewSfdCode, NewSfdText)
                     Case "o"
                         'Just copy the $o
+                        F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
+                    Case "n"
+                        'Just copy the $n
                         F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
                 End Select
             Loop
