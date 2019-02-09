@@ -641,6 +641,7 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
     'Rewrites 049 so Parse049 can handle it: $a CLUR $l [designation1] barcode1 $l [designation2] barcode2 etc.
     '20090617 akohler: for College Approvals, temporarily adding $o to input file in phase 1 load; need to preserve it here
     '20190204 akohler: Add support for 049 $n notes, optional subfield in each $a group
+    '20190208 akohler: Add support for 049 $v summary holdings
         
     Dim F049_new As String
     Dim NewSfdCode As String
@@ -668,6 +669,9 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
                         F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
                     Case "n"
                         'Just copy the $n
+                        F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
+                    Case "v"
+                        'Just copy the $v
                         F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
                 End Select
             Loop
