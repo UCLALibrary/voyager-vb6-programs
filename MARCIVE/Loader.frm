@@ -25,8 +25,7 @@ Option Explicit
 Private Const UBERLOGMODE As Boolean = False
 
 Private Const ERROR_BAR As String = "*** ERROR ***"
-'20080908 Increased from 2000 to 2500
-Private Const MAX_RECORD_COUNT As Integer = 2500
+Private Const MAX_RECORD_COUNT As Integer = 4000
 
 '*****
 'Form-level globals - let's keep this list short!
