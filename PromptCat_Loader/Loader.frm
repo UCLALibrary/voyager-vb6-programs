@@ -38,7 +38,7 @@ Private Sub Main()
     'This is the controlling procedure for this form
     Set GL = New Globals
     GL.Init Command
-'GL.Init "-t ucladb -f " & App.Path & "\foo.mrc"
+'GL.Init "-t ucladb -f " & App.Path & "\foo.002"
 
     CatLocID = GL.CatLocID
     ReDim OclcRecords(1 To MAX_RECORD_COUNT) As OclcRecordType  '2000 should be plenty
@@ -291,6 +291,10 @@ Private Sub LoadRecords(OclcRecords() As OclcRecordType)
         'Different search based on record source
         If IsCasaliniRecord(OclcRecord.BibRecord) = True Then
             SearchDB_Casalini OclcRecord
+        ElseIf IsHarrassowitzRecord(OclcRecord.BibRecord) = True Then
+            'Re-use increasingly misnamed Casalini search routine for Harrassowitz
+            SearchDB_Casalini OclcRecord
+            'SearchDB_Harrassowitz OclcRecord
         Else
             SearchDB OclcRecord
         End If
@@ -2142,7 +2146,28 @@ Private Function IsCasaliniRecord(BibRecord As Utf8MarcRecordClass) As Boolean
                 End If
             End If
         End If
-        
     End With
     IsCasaliniRecord = result
+End Function
+
+Private Function IsHarrassowitzRecord(BibRecord As Utf8MarcRecordClass) As Boolean
+    'Deterimine if record comes from Harrassowitz, as opposed to other sources.
+    'All records seem to have 987 $a starting with "har"
+    
+    Dim result As Boolean
+    'Assume this is not a Harrassowitz record
+    result = False
+    With BibRecord
+        .FldFindFirst "987"
+        '984 seems to be used only once, with only 1 $c
+        If .FldWasFound Then
+            .SfdFindFirst "a"
+            If .SfdWasFound Then
+                If InStr(1, .SfdText, "har", vbBinaryCompare) = 1 Then
+                    result = True
+                End If
+            End If
+        End If
+    End With
+    IsHarrassowitzRecord = result
 End Function
