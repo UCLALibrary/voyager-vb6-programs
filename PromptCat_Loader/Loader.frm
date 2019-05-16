@@ -2070,6 +2070,7 @@ End Sub
 
 Private Function F910AllowsOverlay(BibRecord As Utf8MarcRecordClass) As Boolean
     'If (Voyager) record has any 910 $a other than MARS or Promptcat or UclaCollMgr, overlay is not OK
+    'VBT-1275: Also allow overlay of Harrassowitz EOD records, which have: ‡a Harrassowitz bibliographic data with order information
     Dim OK As Boolean
     Dim s910a As String
     OK = True
@@ -2079,7 +2080,7 @@ Private Function F910AllowsOverlay(BibRecord As Utf8MarcRecordClass) As Boolean
             .SfdFindFirst "a"
             Do While .SfdWasFound
                 s910a = .SfdText
-                If InStr(1, s910a, "MARS", vbTextCompare) <> 1 And InStr(1, s910a, "Promptcat", vbTextCompare) <> 1 And InStr(1, s910a, "UclaCollMgr", vbTextCompare) <> 1 Then
+                If InStr(1, s910a, "MARS", vbTextCompare) <> 1 And InStr(1, s910a, "Promptcat", vbTextCompare) <> 1 And InStr(1, s910a, "UclaCollMgr", vbTextCompare) <> 1 And InStr(1, s910a, "Harrassowitz", vbTextCompare) <> 1 Then
                     OK = False
                 End If
                 .SfdFindNext
@@ -2097,14 +2098,19 @@ Private Function ElvlAllowsOverlay(OclcElvl As String, VgerElvl As String) As Bo
     'Any OCLC value can replace Voyager z (which should exist only in brief GOBI records)
     'OCLC blank can replace any Voyager value
     'OCLC 4 can replace any Voyager value except blank
-    'OCLC i can replace any Voyager value except blank or 4
+    'OCLC I can replace any Voyager value except blank or 4
     'OCLC M can replace any Voyager value except blank or 4
     'OCLC 8 can replace any Voyager value except blank, 4, I or M
     'OCLC 3 can replace any Voyager value except blank, 4, I, M or 8
     'No other OCLC value can replace any Voyager value
     
+    'Per VBT-1275, case does not matter: for example, i and I are interchangeable (though only upper case values are documented...)
+    'Force values to upper case for comparison
+    OclcElvl = UCase(OclcElvl)
+    VgerElvl = UCase(VgerElvl)
+    
     OkToReplace = False
-    If VgerElvl = "z" Then
+    If VgerElvl = "Z" Then
         OkToReplace = True
     Else
         Select Case OclcElvl
@@ -2112,7 +2118,7 @@ Private Function ElvlAllowsOverlay(OclcElvl As String, VgerElvl As String) As Bo
                 OkToReplace = True
             Case "4"
                 OkToReplace = IIf(VgerElvl <> " ", True, False)
-            Case "i"
+            Case "I"
                 OkToReplace = IIf(VgerElvl <> " " And VgerElvl <> "4", True, False)
             Case "M"
                 OkToReplace = IIf(VgerElvl <> " " And VgerElvl <> "4", True, False)
