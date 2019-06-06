@@ -42,6 +42,7 @@ Public Sub RunLocalCode()
             AddSpacToRecord Record, "hol", HolID, SpacCode, SpacText
             
             DoEvents
+            NiceSleep GL.Interval
         Loop 'GetNextRow
     End With
     
