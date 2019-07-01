@@ -1,8 +1,8 @@
 Type=Exe
-Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\WINDOWS\system32\stdole2.tlb#OLE Automation
-Reference=*\G{2ABD9797-5387-48A4-854E-E30693B5B87A}#1.0#0#..\..\..\..\voyager\Extras\VgerReader6.dll#VgerReader6
-Reference=*\G{3F4DACA7-160D-11D2-A8E9-00104B365C9F}#5.5#0#..\..\..\..\WINDOWS\system32\vbscript.dll\3#Microsoft VBScript Regular Expressions 5.5
+Reference=*\G{00020430-0000-0000-C000-000000000046}#2.0#0#..\..\..\..\Windows\SysWOW64\stdole2.tlb#OLE Automation
+Reference=*\G{3F4DACA7-160D-11D2-A8E9-00104B365C9F}#5.5#0#..\..\..\..\Windows\SysWOW64\vbscript.dll\3#Microsoft VBScript Regular Expressions 5.5
 Reference=*\G{FC1C9E5C-72B6-4E0C-9245-26D611251591}#1.0#0#..\..\..\..\Voyager\system\BatchCat2010-00.dll#Voyager Batch Cataloging Utility
+Reference=*\G{347B7CC6-2BA6-465B-81D1-A747E642D670}#2.0#0#..\..\DLLs\VgerReader6.dll#VgerReader6
 Form=Loader.frm
 Class=Utf8CharClass; ..\..\..\VB6_Shared_Code\Utf8Char.cls
 Class=Utf8MarcFileClass; ..\..\..\VB6_Shared_Code\Utf8MarcFile.cls
