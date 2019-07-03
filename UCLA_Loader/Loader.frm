@@ -545,7 +545,6 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
     
     Dim f001 As String
     Dim f003 As String
-    Dim f005 As String
     Dim f019a As String
     Dim f035 As String
     Dim OclcCnt As Integer
@@ -714,14 +713,6 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
             .FldFindNext
         Loop '9XX
         
-        'VBT-1339: get date for 948 $c from 005 if present, else use yesterday's date, in YYYYMMDD
-        .FldFindFirst "005"
-        If .FldWasFound Then
-            f005 = Mid(.FldText, 1, 8) 'YYYYMMDD
-        Else
-            f005 = Format(Date - 1, "YYYYMMDD")
-        End If
-        
         '20090921: check $a for 'pacq' and set RecordIn.NeedsInProcess if found
         RecordIn.NeedsInProcess = False
         .FldFindFirst "948"
@@ -733,7 +724,7 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
                 End If
                 .SfdFindNext
             Loop
-            'Insert $c in appropriate place, if none found
+            'Insert $c with yesterday's date in appropriate place, if none found
             .SfdFindFirst "c"
             If .SfdWasFound = False Then
                 .SfdMoveFirst
@@ -741,10 +732,10 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
                     .SfdMoveNext
                 Loop
                 If .SfdPointer >= 0 Then
-                    .SfdInsertBefore "c", f005
+                    .SfdInsertBefore "c", Format(Date - 1, "YYYYMMDD")
                 Else
                     .SfdMoveLast
-                    .SfdInsertAfter "c", f005
+                    .SfdInsertAfter "c", Format(Date - 1, "YYYYMMDD")
                 End If
             End If
             .FldFindNext
