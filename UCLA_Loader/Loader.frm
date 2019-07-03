@@ -714,15 +714,14 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
             .FldFindNext
         Loop '9XX
         
-        '20070627: get YYYYMMDD from 005 if present, else from OCLC filename
+        'VBT-1339: get date for 948 $c from 005 if present, else use yesterday's date, in YYYYMMDD
         .FldFindFirst "005"
         If .FldWasFound Then
             f005 = Mid(.FldText, 1, 8) 'YYYYMMDD
         Else
-            f005 = Mid(Format(Date, "yyyy"), 1, 2) & Mid(GL.BaseFilename, 2, 6)  'CC + YYMMDD; assumes files are named in OCLC's normal way, with D followed by YYMMDD
+            f005 = Format(Date - 1, "YYYYMMDD")
         End If
         
-        '20070627: add 948 $c with YYYYMMDD
         '20090921: check $a for 'pacq' and set RecordIn.NeedsInProcess if found
         RecordIn.NeedsInProcess = False
         .FldFindFirst "948"
@@ -734,22 +733,19 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
                 End If
                 .SfdFindNext
             Loop
-            'Remove any existing $c
+            'Insert $c in appropriate place, if none found
             .SfdFindFirst "c"
-            Do While .SfdWasFound
-                .SfdDelete
-                .SfdFindNext
-            Loop
-            'Add new $c in appropriate place
-            .SfdMoveFirst
-            Do While .SfdCode <> "" And .SfdCode < "c"
-                .SfdMoveNext
-            Loop
-            If .SfdPointer >= 0 Then
-                .SfdInsertBefore "c", f005
-            Else
-                .SfdMoveLast
-                .SfdInsertAfter "c", f005
+            If .SfdWasFound = False Then
+                .SfdMoveFirst
+                Do While .SfdCode <> "" And .SfdCode < "c"
+                    .SfdMoveNext
+                Loop
+                If .SfdPointer >= 0 Then
+                    .SfdInsertBefore "c", f005
+                Else
+                    .SfdMoveLast
+                    .SfdInsertAfter "c", f005
+                End If
             End If
             .FldFindNext
         Loop
