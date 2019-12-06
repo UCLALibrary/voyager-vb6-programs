@@ -11,29 +11,8 @@ Public Sub RunLocalCode()
     CatLocID = GetLocID("lissystem")
 
     ' 20090619 akohler: new SQL, finds bibs where there's at least 1 suppressed mfhd, no unsuppressed mfhds, and bib is unsuppressed
-    SQL = _
-        "with suppressed_mfhds as ( " & vbCrLf & _
-          "select " & vbCrLf & _
-            "bm.bib_id " & vbCrLf & _
-          ", bm.mfhd_id " & vbCrLf & _
-          "from bib_mfhd bm " & vbCrLf & _
-          "inner join mfhd_master mm on bm.mfhd_id = mm.mfhd_id " & vbCrLf & _
-          "where mm.suppress_in_opac = 'Y' " & vbCrLf & _
-        ") " & vbCrLf & _
-        ", unsuppressed_mfhds as ( " & vbCrLf & _
-          "select " & vbCrLf & _
-            "bm.bib_id " & vbCrLf & _
-          "from bib_mfhd bm " & vbCrLf & _
-          "inner join mfhd_master mm on bm.mfhd_id = mm.mfhd_id " & vbCrLf & _
-          "where mm.suppress_in_opac = 'N' " & vbCrLf & _
-        ") " & vbCrLf & _
-        "select distinct sm.bib_id " & vbCrLf & _
-        "from suppressed_mfhds sm " & vbCrLf & _
-        "where not exists (select * from unsuppressed_mfhds where bib_id = sm.bib_id) " & vbCrLf & _
-        "and exists (select * from bib_master where bib_id = sm.bib_id and suppress_in_opac = 'N') " & vbCrLf & _
-        "order by sm.bib_id "
-    
-
+    SQL = GetTextFromFile(GL.InputFilename)
+ 
     rs = GL.GetRS
     
     With GL.Vger
