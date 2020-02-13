@@ -331,14 +331,14 @@ Private Sub LoadRecords(OclcRecords() As OclcRecordType)
                     Loop
                 End With
                 'Compare each incoming HR to set of existing Voyager HR
-                'Replace Voyager HR if it was created by "promptcat", and it's the only one with the same loc as the incoming HR
+                'Replace Voyager HR if it was created by "promptcat" (phase-1 load) or by "(SYS: ACQ)" (Acq client via PO), and it's the only one with the same loc as the incoming HR.
                 'If no existing Voyager HR match the incoming, or if multiple match, reject & log the incoming HR
                 For HolCnt = 1 To OclcRecord.HoldingsRecordCount
                     OclcHolRecord = OclcRecord.HoldingsRecords(HolCnt)
                     With OclcHolRecord
                         HolMatchCnt = 0
                         For cnt = 1 To HolLocCnt
-                            If (ExistingHols(cnt).LocCode = .MatchLoc) And (LCase(ExistingHols(cnt).Creator) = "promptcat") Then
+                            If (ExistingHols(cnt).LocCode = .MatchLoc) And ((LCase(ExistingHols(cnt).Creator) = "promptcat") Or ExistingHols(cnt).Creator = "(SYS: ACQ)") Then
                                 HolMatchCnt = HolMatchCnt + 1
                                 HolID = ExistingHols(cnt).HolID
                             End If
