@@ -1,6 +1,6 @@
 Utf8CharClass = 0, 0, 0, 0, C
 Utf8MarcFileClass = 0, 0, 0, 0, C
-Utf8MarcRecordClass = 0, 0, 0, 0, C
+Utf8MarcRecordClass = 130, 130, 1734, 820, C
 API32 = 0, 0, 0, 0, C
 GeneralRoutines = 78, 78, 1682, 768, C
 Ini = 0, 0, 0, 0, C
