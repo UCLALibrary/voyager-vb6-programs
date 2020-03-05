@@ -523,16 +523,22 @@ Private Sub ProcessUclaRecord(BibID As Long, VgerRecord As Utf8MarcRecordClass, 
                 Set TargetRecord = FindTargetRecord(ScpRecord)
                 If Not (TargetRecord Is Nothing) Then
                     TargetBibID = CLng(GetRecordNumber(TargetRecord))
-                    Move856Fields BibID, TargetBibID
-                    DeleteBibFields BibID
-                    If HasPOAttached(BibID) Then
-                        WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
-                        WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
-                        If HasNoUclaItems(BibID) Then WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                    'VBT-1550: Stop and reject record if target is same as the source
+                    If TargetBibID = BibID Then
+                        WriteLog GL.Logfile, vbTab & "ERROR: Target online record is same as source print record: bib " & TargetBibID & " - see review file"
+                        WriteRawRecord ReviewFile, VgerRecord.MarcRecordOut
                     Else
-                        DeleteInternetHoldings TargetBibID
-                        MoveInternetHoldings BibID, TargetBibID
-                        If HasNoUclaItems(BibID) Then WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
+                        Move856Fields BibID, TargetBibID
+                        DeleteBibFields BibID
+                        If HasPOAttached(BibID) Then
+                            WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
+                            WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
+                            If HasNoUclaItems(BibID) Then WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                        Else
+                            DeleteInternetHoldings TargetBibID
+                            MoveInternetHoldings BibID, TargetBibID
+                            If HasNoUclaItems(BibID) Then WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
+                        End If
                     End If
                 Else
                     WriteLog GL.Logfile, vbTab & "WARNING: No online version found in Voyager - see review file"
@@ -551,18 +557,24 @@ Private Sub ProcessUclaRecord(BibID As Long, VgerRecord As Utf8MarcRecordClass, 
                 Set TargetRecord = FindTargetRecord(ScpRecord)
                 If Not (TargetRecord Is Nothing) Then
                     TargetBibID = CLng(GetRecordNumber(TargetRecord))
-                    Move856Fields BibID, TargetBibID
-                    DeleteBibFields BibID
-                    If HasPOAttached(BibID) Then
-                        WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
-                        WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
-                        WriteLog GL.Logfile, vbTab & "* Bib record *should* be suppressed"
-                        WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                    'VBT-1550: Stop and reject record if target is same as the source
+                    If TargetBibID = BibID Then
+                        WriteLog GL.Logfile, vbTab & "ERROR: Target online record is same as source print record: bib " & TargetBibID & " - see review file"
+                        WriteRawRecord ReviewFile, VgerRecord.MarcRecordOut
                     Else
-                        DeleteInternetHoldings TargetBibID
-                        MoveInternetHoldings BibID, TargetBibID
-                        WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
-                        SuppressBibRecord BibID
+                        Move856Fields BibID, TargetBibID
+                        DeleteBibFields BibID
+                        If HasPOAttached(BibID) Then
+                            WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
+                            WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
+                            WriteLog GL.Logfile, vbTab & "* Bib record *should* be suppressed"
+                            WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                        Else
+                            DeleteInternetHoldings TargetBibID
+                            MoveInternetHoldings BibID, TargetBibID
+                            WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
+                            SuppressBibRecord BibID
+                        End If
                     End If
                 Else
                     WriteLog GL.Logfile, vbTab & "WARNING: No online version found in Voyager - see review file"
@@ -581,17 +593,23 @@ Private Sub ProcessUclaRecord(BibID As Long, VgerRecord As Utf8MarcRecordClass, 
                 Set TargetRecord = FindTargetRecord(ScpRecord)
                 If Not (TargetRecord Is Nothing) Then
                     TargetBibID = CLng(GetRecordNumber(TargetRecord))
-                    Move856Fields BibID, TargetBibID
-                    If HasPOAttached(BibID) Then
-                        WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
-                        WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
-                        WriteLog GL.Logfile, vbTab & "* Bib record *should* be deleted"
-                        WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                    'VBT-1550: Stop and reject record if target is same as the source
+                    If TargetBibID = BibID Then
+                        WriteLog GL.Logfile, vbTab & "ERROR: Target online record is same as source print record: bib " & TargetBibID & " - see review file"
+                        WriteRawRecord ReviewFile, VgerRecord.MarcRecordOut
                     Else
-                        DeleteInternetHoldings TargetBibID
-                        MoveInternetHoldings BibID, TargetBibID
-                        WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
-                        DeleteBibRecord BibID
+                        Move856Fields BibID, TargetBibID
+                        If HasPOAttached(BibID) Then
+                            WriteLog GL.Logfile, vbTab & "ERROR: Purchase order(s) attached to bib " & BibID
+                            WriteLog GL.Logfile, vbTab & "* Manual cleanup required for internet holdings"
+                            WriteLog GL.Logfile, vbTab & "* Bib record *should* be deleted"
+                            WriteLog GL.Logfile, vbTab & "* CLU *should* be deleted from OCLC: " & GetRecordNumber(ScpRecord)
+                        Else
+                            DeleteInternetHoldings TargetBibID
+                            MoveInternetHoldings BibID, TargetBibID
+                            WriteLog GL.Logfile, vbTab & "DELETE CLU FROM OCLC: " & GetRecordNumber(ScpRecord)
+                            DeleteBibRecord BibID
+                        End If
                     End If
                 Else
                     WriteLog GL.Logfile, vbTab & "WARNING: No online version found in Voyager - see review file"
@@ -599,7 +617,7 @@ Private Sub ProcessUclaRecord(BibID As Long, VgerRecord As Utf8MarcRecordClass, 
                 End If
             Else
                 'Scenario 2.c.ii
-                WriteLog GL.Logfile, vbTab & "DEBUG: Scenario 2.c.i"
+                WriteLog GL.Logfile, vbTab & "DEBUG: Scenario 2.c.ii"
                 DeleteBibFields BibID
             End If
     End Select
