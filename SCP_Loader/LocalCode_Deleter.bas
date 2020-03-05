@@ -443,6 +443,9 @@ Private Function Scp599cIsNewer(ScpRecord As Utf8MarcRecordClass, VgerRecord As 
     '20181009: Also treat records with no Voyager 599 $c as older than SCP deletion candidates
     ElseIf (Scp599c <> "") And (Vgr599c = "") Then
         result = True
+    '20200305: Also allow *all* SCP records with no 599 $c to be deletion candidates
+    ElseIf Scp599c = "" Then
+        result = True
     End If
 
     If GL.ProductionMode = False Then WriteLog GL.Logfile, vbTab & "DEBUG: SCP 599: " & Scp599c & " *** VGR 599: " & Vgr599c
@@ -469,6 +472,11 @@ Private Function Get599c(BibRecord As Utf8MarcRecordClass) As String
             .FldFindNext
         Loop
     End With
+    'Should be YYYYMMDD; data's pretty clean, not bothering with validation.
+    'If value is only 6 characters long, assume it's YYMMDD and prepend "20"
+    If Len(f599c) = 6 Then
+        f599c = "20" & f599c
+    End If
     Get599c = f599c
 End Function
 
