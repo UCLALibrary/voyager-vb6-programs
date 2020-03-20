@@ -646,6 +646,7 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
     '20090617 akohler: for College Approvals, temporarily adding $o to input file in phase 1 load; need to preserve it here
     '20190204 akohler: Add support for 049 $n notes, optional subfield in each $a group
     '20190208 akohler: Add support for 049 $v summary holdings
+    '20200319 akohler: YBP is now supplying records with designation & barcode already combined in $l (and no $q); apply the below only if incoming 049 has $q
         
     Dim F049_new As String
     Dim NewSfdCode As String
@@ -653,43 +654,45 @@ Private Sub Rewrite049(RecordIn As OclcRecordType)
     
     With RecordIn.BibRecord
         If .FldFindFirst("049") Then
-            F049_new = ""
-            .SfdMoveTop
-            Do While .SfdMoveNext
-                Select Case .SfdCode
-                    Case "a"
-                        'Just copy the $a
-                        F049_new = .SfdMake(.SfdCode, .SfdText)
-                    Case "l"
-                        'Preserve the $l for combination with $q
-                        NewSfdText = .SfdText
-                    Case "q"
-                        'Format & combine $l and $q
-                        NewSfdCode = "l"
-                        NewSfdText = "[" & .SfdText & "] " & NewSfdText
-                        F049_new = F049_new & .SfdMake(NewSfdCode, NewSfdText)
-                    Case "o"
-                        'Just copy the $o
-                        F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
-                    Case "n"
-                        'Just copy the $n
-                        F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
-                    Case "v"
-                        'Just copy the $v
-                        F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
-                End Select
-            Loop
-            'If there wasn't a final $q, write just the $l
-            F049_new = F049_new & .SfdMake("l", NewSfdText)
-            
-            'Now replace old 049 with new
-            .FldText = F049_new
-        End If
+            If .SfdFindFirst("q") Then
+                F049_new = ""
+                .SfdMoveTop
+                Do While .SfdMoveNext
+                    Select Case .SfdCode
+                        Case "a"
+                            'Just copy the $a
+                            F049_new = .SfdMake(.SfdCode, .SfdText)
+                        Case "l"
+                            'Preserve the $l for combination with $q
+                            NewSfdText = .SfdText
+                        Case "q"
+                            'Format & combine $l and $q
+                            NewSfdCode = "l"
+                            NewSfdText = "[" & .SfdText & "] " & NewSfdText
+                            F049_new = F049_new & .SfdMake(NewSfdCode, NewSfdText)
+                        Case "o"
+                            'Just copy the $o
+                            F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
+                        Case "n"
+                            'Just copy the $n
+                            F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
+                        Case "v"
+                            'Just copy the $v
+                            F049_new = F049_new & .SfdMake(.SfdCode, .SfdText)
+                    End Select
+                Loop
+                'If there wasn't a final $q, write just the $l
+                F049_new = F049_new & .SfdMake("l", NewSfdText)
+                
+                'Now replace old 049 with new
+                .FldText = F049_new
+            End If '$q exists
+        End If '049 exists
     End With
 End Sub
 
 Private Sub Parse049(RecordIn As OclcRecordType)
-    'Parse bib records 049 field to create holdings record(s) and item(s)
+        'Parse bib records 049 field to create holdings record(s) and item(s)
     ReDim RecordIn.HoldingsRecords(1 To 10) As HoldingsRecordType   '10 should be plenty
     Dim HolRecord As HoldingsRecordType
     Dim HolRecordCnt As Integer
