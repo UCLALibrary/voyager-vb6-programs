@@ -18,8 +18,8 @@ Public Sub RunLocalCode()
     Dim ItemLoc As String
     Dim ItemOwner As String
     Dim ItemType As String
-    Dim ItemStatus As String
     Dim ItemStatuses() As String
+    Dim ItemStatusDate As String
     Dim Fld976 As String
     Dim OutFile As String
     Dim cnt As Integer
@@ -41,8 +41,8 @@ Public Sub RunLocalCode()
             ItemLoc = .CurrentRow(BibRS, 5)
             ItemOwner = .CurrentRow(BibRS, 6)
             ItemType = .CurrentRow(BibRS, 7)
-            'ItemStatus = .CurrentRow(BibRS, 8)
             ItemStatuses = Split(.CurrentRow(BibRS, 8), ", ")
+            ItemStatusDate = Format(.CurrentRow(BibRS, 9), "YYYY-MM-DD HH:mm:SS")
             
             SkeletonForm.lblStatus.Caption = "Processing " & BibID
             DoEvents
@@ -52,15 +52,17 @@ Public Sub RunLocalCode()
                 'Avoid fake starter bib
                 If PrevBibID > 0 Then
                     WriteRawRecord OutFile, BibRecord.MarcRecordOut
-WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
+'WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
                 End If
                 Set BibRecord = GetVgerBibRecord(CStr(BibID))
+                WriteLog GL.Logfile, "Extracting data for bib: " & BibID
                 PrevBibID = BibID
             End If
             
             'Add item data to a new 976 field
             'First assemble the field by adding subfields (where data is present); barcode should always exist
             With BibRecord
+'WriteLog GL.Logfile, vbTab & "Barcode: " & ItemBarcode
                 Fld976 = .SfdMake("a", ItemBarcode)
                 If ItemEnum <> "" Then Fld976 = Fld976 & .SfdMake("b", ItemEnum)
                 If ItemCaption <> "" Then Fld976 = Fld976 & .SfdMake("c", ItemCaption)
@@ -71,7 +73,7 @@ WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
                 For cnt = 0 To UBound(ItemStatuses)
                     Fld976 = Fld976 & .SfdMake("g", ItemStatuses(cnt))
                 Next
-                'If ItemStatus <> "" Then Fld976 = Fld976 & .SfdMake("g", ItemStatus)
+                If ItemStatusDate <> "" Then Fld976 = Fld976 & .SfdMake("h", ItemStatusDate)
                 .FldAddGeneric "976", "  ", Fld976, 3
             End With
             
@@ -79,7 +81,7 @@ WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
         Loop 'BibRS
         'Finished final record, which still needs to be written
         WriteRawRecord OutFile, BibRecord.MarcRecordOut
-WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
+'WriteLog GL.Logfile, vbCrLf & BibRecord.TextFormatted
 
     End With
     SkeletonForm.lblStatus.Caption = "Done!"
