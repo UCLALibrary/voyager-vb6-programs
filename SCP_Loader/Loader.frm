@@ -1088,9 +1088,9 @@ Private Function AddBibRecord(RecordIn As OclcRecordType, LibraryID As Long) As 
     With OclcBib
         '2012-04-24: SCP now supplies Unicode records
         .CharacterSetIn = "U"
+        .CharacterSetOut = "U"
         .IgnoreSfdOrder = True
         .MarcRecordIn = RecordIn.BibRecord.MarcRecordOut
-        .CharacterSetOut = "U"
     End With
  
 'Test856 OclcBib
@@ -1181,8 +1181,8 @@ Private Function ReplaceBibRecord(RecordIn As OclcRecordType, BibID As Long) As 
     With OclcBib
         '2012-04-24: SCP now supplies Unicode records
         .CharacterSetIn = "U"
-        .IgnoreSfdOrder = True
         .CharacterSetOut = "U"
+        .IgnoreSfdOrder = True
         .MarcRecordIn = RecordIn.BibRecord.MarcRecordOut
     End With
 
