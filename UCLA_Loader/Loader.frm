@@ -600,76 +600,13 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
         
         ReDim Preserve RecordIn.OclcNumbers(1 To OclcCnt)
         
-        .FldFindFirst "6"
-        Do While .FldWasFound
-            ind2 = Right(.FldInd, 1)
-            Select Case .FldTag
-                Case "600"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "692", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "610"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "693", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "611"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "694", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "630"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "695", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "650"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "690", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "651"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "691", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-            End Select
-            .FldFindNext
-        Loop
-        
         .FldFindFirst ("856")
         Do While .FldWasFound
-'            Has856 = True   'for use with 655 check later on
-            'Add $xUCLA if 856 has neither $xUCLA nor $xCDL nor $xUCLA Law
+            'Add $xUCLA if 856 has neither xCDL nor $x starting with UCLA
             Add856x_UCLA = True
             .SfdFindFirst "x"
             Do While .SfdWasFound
-                If .SfdText = "CDL" Or .SfdText = "UCLA" Or .SfdText = "UCLA Law" Then
+                If .SfdText = "CDL" Or (InStr(1, .SfdText, "UCLA", vbTextCompare) = 1) Then
                     Add856x_UCLA = False
                 End If
                 .SfdFindNext
@@ -757,6 +694,18 @@ Private Sub PreprocessRecord(RecordIn As OclcRecordType)
                     .FldDelete
                 End If
             End If
+            .FldFindNext
+        Loop
+        
+        'VBT-1696: Remove 029 and 891 fields
+        .FldFindFirst "029"
+        Do While .FldWasFound
+            .FldDelete
+            .FldFindNext
+        Loop
+        .FldFindFirst "891"
+        Do While .FldWasFound
+            .FldDelete
             .FldFindNext
         Loop
         
@@ -1663,10 +1612,10 @@ End If
                     If .GetLeaderValue(7, 1) = "b" Or .GetLeaderValue(7, 1) = "i" Or .GetLeaderValue(7, 1) = "s" Then
                         AddField = True
                     End If
-                    'All formats, for Law or CDL
+                    'All formats, for CDL or UCLA
                     .SfdFindFirst "x"
                     Do While .SfdWasFound
-                        If UCase(.SfdText) = "UCLA LAW" Or UCase(.SfdText) = "CDL" Then
+                        If .SfdText = "CDL" Or (InStr(1, .SfdText, "UCLA", vbTextCompare) = 1) Then
                             AddField = True
                         End If
                         .SfdFindNext
@@ -1707,14 +1656,27 @@ End If
                     If Left(.FldTag, 1) = "6" And .FldInd = " 4" Then
                         AddField = True
                     End If
+                    '6xx _7 $2 local
+                    If Left(.FldTag, 1) = "6" And .FldInd = " 7" Then
+                        '$2 is not repeatable
+                        If .SfdFindFirst("2") Then
+                            If .SfdText = "local" Then
+                                AddField = True
+                            End If
+                        End If
+                    End If
+                    '69x (all)
+                    If Left(.FldTag, 2) = "69" Then
+                        AddField = True
+                    End If
                     '9XX (other than those handled above, and exceptions here)
                     '2012-12-20: 936 and 985 no longer retained
                     If Left(.FldTag, 1) = "9" And (.FldTag <> "936" And .FldTag <> "985") Then
                         AddField = True
                     End If
-                    'XXX $5 CLU
+                    'XXX $5 starting with CLU
                     If .SfdFindFirst("5") Then  '$5 is not repeatable so FindFirst is right
-                        If .SfdText = "CLU" Then
+                        If InStr(1, .SfdText, "CLU", vbTextCompare) = 1 Then
                             AddField = True
                         End If
                     End If
