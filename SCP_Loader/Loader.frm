@@ -432,9 +432,9 @@ Private Sub PrepRecord(ByRef ScpRecord As OclcRecordType)
         'CDL doesn't usually include 003, but when they do, it's wrong, so remove it
         'No longer delete 655 fields (regardless of 2nd indicator), per VBT-577 20160603
         If IsSerial(Biblvl) = True Then
-            DelFields() = Array("003", "049", "099", "510", "590", "690", "9XX")
+            DelFields() = Array("003", "029", "049", "099", "510", "590", "690", "891", "9XX")
         Else
-            DelFields() = Array("003", "049", "099", "690", "9XX")
+            DelFields() = Array("003", "029", "049", "099", "690", "891", "9XX")
         End If
         'Arrays created by Array() are always 0-based
         For DelFieldCnt = 0 To UBound(DelFields)
@@ -1277,18 +1277,13 @@ End If
                     '590
                     Case "590"
                         AddField = True
-                    '650 _4
-                    Case "650"
-                        If .FldInd2 = "4" Then
-                            AddField = True
-                        End If
                     'No longer retain 655 fields (unless preserved below by $5 CLU), per VBT-577 20160603
                     '655
                     '856 (keep those with $xUCLA or $xUCLA Law)
                     Case "856"
                         .SfdFindFirst "x"
                         Do While .SfdWasFound
-                            If .SfdText = "UCLA" Or .SfdText = "UCLA Law" Then
+                            If .SfdText = "CDL" Or (InStr(1, .SfdText, "UCLA", vbTextCompare) = 1) Then
                                 AddField = True
                             End If
                             .SfdFindNext
@@ -1310,13 +1305,30 @@ End If
                         If Left(.FldTag, 1) = "6" And .FldInd2 = "2" Then
                             AddField = True
                         End If
+                        '6XX _4
+                        If Left(.FldTag, 1) = "6" And .FldInd2 = "4" Then
+                            AddField = True
+                        End If
+                        '6xx _7 $2 local
+                        If Left(.FldTag, 1) = "6" And .FldInd2 = "7" Then
+                            '$2 is not repeatable
+                            If .SfdFindFirst("2") Then
+                                If .SfdText = "local" Then
+                                    AddField = True
+                                End If
+                            End If
+                        End If
+                        '69x (all)
+                        If Left(.FldTag, 2) = "69" Then
+                            AddField = True
+                        End If
                         '9XX, except 936 for some reason
                         If Left(.FldTag, 1) = "9" And .FldTag <> "936" Then
                             AddField = True
                         End If
-                        'XXX $5 CLU
+                        'XXX $5 starting with CLU
                         If .SfdFindFirst("5") Then  '$5 is not repeatable so FindFirst is right
-                            If .SfdText = "CLU" Then
+                            If InStr(1, .SfdText, "CLU", vbTextCompare) = 1 Then
                                 AddField = True
                             End If
                         End If
