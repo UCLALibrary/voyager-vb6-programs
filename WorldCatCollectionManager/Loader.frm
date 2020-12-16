@@ -164,16 +164,6 @@ Private Sub PrepareRecord(WcmRecord As OclcRecordType)
             .FldFindNext
         Loop
         
-        'Delete 6xx except those with 2nd indicator = 0 or 2
-        'Exception: Do not delete 655 fields (regardless of 2nd indicator), per VBT-577 20160603
-        .FldFindFirst "6"
-        Do While .FldWasFound
-            If Not (.FldInd2 = "0" Or .FldInd2 = "2" Or .FldTag = "655") Then
-                .FldDelete
-            End If
-            .FldFindNext
-        Loop
-        
         'Delete 7xx with $5
         .FldFindFirst "7"
         Do While .FldWasFound
@@ -186,6 +176,13 @@ Private Sub PrepareRecord(WcmRecord As OclcRecordType)
         
         'Delete 856
         .FldFindFirst "856"
+        Do While .FldWasFound
+            .FldDelete
+            .FldFindNext
+        Loop
+        
+        'Delete 891 fields
+        .FldFindFirst "891"
         Do While .FldWasFound
             .FldDelete
             .FldFindNext
@@ -659,15 +656,33 @@ Private Sub UpdateVoyager(WcmRecord As OclcRecordType)
                         'No AddField for 910 as content is being added directly to the OCLC record
                     End With 'OclcBib
                 Case Else
+                    '6xx _4
+                    If Left(.FldTag, 1) = "6" And .FldInd2 = "4" Then
+                            AddField = True
+                    End If
+                    '6xx _7 $2 local
+                    If Left(.FldTag, 1) = "6" And .FldInd2 = "7" Then
+                        '$2 is not repeatable
+                        If .SfdFindFirst("2") Then
+                            If .SfdText = "local" Then
+                                AddField = True
+                            End If
+                        End If
+                    End If
+                    '69x (all)
+                    If Left(.FldTag, 2) = "69" Then
+                        AddField = True
+                    End If
+                    
                     'The other 9xx fields, with a few excluded
                     '901-909, 911-935, 937-999
                     If Left(.FldTag, 1) = "9" And (.FldTag <> "910" And .FldTag <> "936") Then
                         AddField = True
                     End If
                     
-                    'Any field with $5 CLU
+                    'Any field with $5 starting with CLU
                     If .SfdFindFirst("5") Then  '$5 is not repeatable so FindFirst is right
-                        If .SfdText = "CLU" Then
+                        If InStr(1, .SfdText, "CLU", vbTextCompare) = 1 Then
                             AddField = True
                         End If
                     End If
