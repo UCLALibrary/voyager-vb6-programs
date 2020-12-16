@@ -181,69 +181,6 @@ Private Sub PrepareRecord(SourceRecord As OclcRecordType)
             .FldFindNext
         Loop
         
-        'Modify certain 6xx fields with specific indicators
-        .FldFindFirst "6"
-        Do While .FldWasFound
-            ind2 = Right(.FldInd, 1)
-            Select Case .FldTag
-                Case "600"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "692", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "610"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "693", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "611"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "694", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "630"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "695", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "650"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "690", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "651"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "691", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-            End Select
-            .FldFindNext
-        Loop
-        
         'Change LDR/17 from 5 to blank
         If .GetLeaderValue(17, 1) = "5" Then
             .ChangeLeaderValue 17, " "
@@ -691,15 +628,33 @@ Private Sub UpdateVoyager(SourceRecord As OclcRecordType)
                         'No AddField for 910 as content is being added directly to the OCLC record
                     End With 'OclcBib
                 Case Else
+                    '6xx _4
+                    If Left(.FldTag, 1) = "6" And .FldInd2 = "4" Then
+                            AddField = True
+                    End If
+                    '6xx _7 $2 local
+                    If Left(.FldTag, 1) = "6" And .FldInd2 = "7" Then
+                        '$2 is not repeatable
+                        If .SfdFindFirst("2") Then
+                            If .SfdText = "local" Then
+                                AddField = True
+                            End If
+                        End If
+                    End If
+                    '69x (all)
+                    If Left(.FldTag, 2) = "69" Then
+                        AddField = True
+                    End If
+                    
                     'The other 9xx fields, with a few excluded
                     '901-909, 911-935, 937-999
                     If Left(.FldTag, 1) = "9" And (.FldTag <> "910" And .FldTag <> "936") Then
                         AddField = True
                     End If
                     
-                    'Any field with $5 CLU
+                    'Any field with $5 starting with CLU
                     If .SfdFindFirst("5") Then  '$5 is not repeatable so FindFirst is right
-                        If .SfdText = "CLU" Then
+                        If InStr(1, .SfdText, "CLU", vbTextCompare) = 1 Then
                             AddField = True
                         End If
                     End If
