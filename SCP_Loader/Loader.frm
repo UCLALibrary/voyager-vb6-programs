@@ -566,68 +566,6 @@ Private Sub PrepRecord(ByRef ScpRecord As OclcRecordType)
         'Add generic 590 for all bib levels
         AddFieldInOrder "590", "  ", .SfdMake("a", "UCLA Library - CDL shared resource."), ScpRecord.BibRecord
         
-        .FldFindFirst "6"
-        Do While .FldWasFound
-            ind2 = Right(.FldInd, 1)
-            Select Case .FldTag
-                Case "600"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "692", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "610"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "693", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "611"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "694", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "630"
-                    If ind2 >= "3" And ind2 <= "8" Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "695", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "650"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "690", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-                Case "651"
-                    If (ind2 = "3") Or (ind2 >= "5" And ind2 <= "8") Then
-                        Ind = .FldInd
-                        Text = .FldText
-                        FldPointer = .FldPointer
-                        .FldDelete
-                        .FldAddGeneric "691", Ind, Text, 3
-                        .FldPointer = FldPointer
-                    End If
-            End Select
-            .FldFindNext
-        Loop
-        
     End With 'SCP Bibrecord
 
 'WriteLog GL.Logfile, "AFTER:"
