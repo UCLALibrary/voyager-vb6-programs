@@ -326,7 +326,7 @@ End Function
 Private Function OkToUpdate(WcmRecord As OclcRecordType) As Boolean
     'Use incoming/Voyager matching results and other info to determine whether incoming record qualifies to update Voyager.
     'Return TRUE if OK, otherwise return FALSE and write record to REJECT file, along with log messages.
-    
+    Const SIZE_DIFF = 500
     Dim VgerRecord As Utf8MarcRecordClass
     Dim OclcSize As Long
     Dim VgerSize As Long
@@ -369,8 +369,8 @@ Private Function OkToUpdate(WcmRecord As OclcRecordType) As Boolean
             'Log and discard, write to review file
             OclcSize = Len(WcmRecord.BibRecord.MarcRecordOut)
             VgerSize = Len(VgerRecord.MarcRecordOut)
-            If OclcSize < VgerSize Then
-                WriteLog GL.Logfile, vbTab & "REVIEW NEEDED: Possible data loss for Voyager bib " & BibID & ": OCLC " & OclcSize & ", VGER " & VgerSize
+            If VgerSize > OclcSize + SIZE_DIFF Then
+                WriteLog GL.Logfile, vbTab & "REVIEW NEEDED: Possible data loss for Voyager bib " & BibID & ": OCLC (" & OclcSize & ") more than " & SIZE_DIFF & " bytes smaller than VGER (" & VgerSize & ")"
                 WriteReviewRecord WcmRecord
                 OK = False
             End If
