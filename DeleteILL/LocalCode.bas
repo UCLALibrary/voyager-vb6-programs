@@ -33,6 +33,7 @@ Public Sub RunLocalCode()
     DoEvents
     'ItemRS contains item ids (and their bib & mfhd ids) to be deleted.
     'Try to delete item, then mfhd, then bib
+    'Can also handle item-less holdings, as long as the query sets itemid = 0
     With GL.Vger
         .ExecuteSQL SQL, ItemRS
         Do While .GetNextRow(ItemRS)
@@ -42,14 +43,19 @@ Public Sub RunLocalCode()
             SkeletonForm.lblStatus.Caption = "Processing " & BibID
             WriteLog GL.Logfile, "BibID: " & BibID
             WriteLog GL.Logfile, vbTab & "HolID: " & HolID
-            ItemRC = GL.BatchCat.DeleteItemRecord(itemID)
-            If ItemRC = diSuccess Then
-                WriteLog GL.Logfile, vbTab & vbTab & "Deleted ItemID " & itemID
-                ItemDelCnt = ItemDelCnt + 1
-            Else
-                WriteLog GL.Logfile, vbTab & vbTab & "Error deleting ItemID " & itemID & " : " & TranslateItemDeleteCode(ItemRC)
+            
+            'Check for item-less holdings, where itemid = 0
+            If itemID > 0 Then
+                ItemRC = GL.BatchCat.DeleteItemRecord(itemID)
+                If ItemRC = diSuccess Then
+                    WriteLog GL.Logfile, vbTab & vbTab & "Deleted ItemID " & itemID
+                    ItemDelCnt = ItemDelCnt + 1
+                Else
+                    WriteLog GL.Logfile, vbTab & vbTab & "Error deleting ItemID " & itemID & " : " & TranslateItemDeleteCode(ItemRC)
+                End If
             End If
             
+            'Now try to delete holdings
             HolRC = GL.BatchCat.DeleteHoldingRecord(HolID)
             If HolRC = dhSuccess Then
                 WriteLog GL.Logfile, vbTab & "Deleted HolID " & HolID
@@ -58,6 +64,7 @@ Public Sub RunLocalCode()
                 WriteLog GL.Logfile, vbTab & "Error deleting HolID " & HolID & " : " & TranslateHoldingsDeleteCode(HolRC)
             End If
             
+            'Finally, try to delete bibs
             BibRC = GL.BatchCat.DeleteBibRecord(BibID)
             If BibRC = dbSuccess Then
                 WriteLog GL.Logfile, "Deleted BibID " & BibID
