@@ -22,28 +22,7 @@ Public Sub RunLocalCode()
     Dim HolDelCnt As Long
     Dim ItemDelCnt As Long
     
-'*** BE SURE TO USE THE RIGHT SQL ***'
-    SQL = _
-        "SELECT  " & vbCrLf & _
-        "/*+ ORDERED */ " & vbCrLf & _
-            "T.Bib_ID " & vbCrLf & _
-        ",  MM.MFHD_ID " & vbCrLf & _
-        "FROM " & vbCrLf & _
-        "(  SELECT " & vbCrLf & _
-                "BT.Bib_ID " & vbCrLf & _
-            "FROM Bib_Text BT " & vbCrLf & _
-            "WHERE BT.Author LIKE '%COTF%UNBD%' " & vbCrLf & _
-            "OR BT.Title LIKE '%COTF%UNBD%' " & vbCrLf & _
-        ") T " & vbCrLf & _
-        "INNER JOIN Bib_MFHD BM " & vbCrLf & _
-            "ON T.Bib_ID = BM.Bib_ID " & vbCrLf & _
-        "INNER JOIN MFHD_Master MM " & vbCrLf & _
-            "ON BM.MFHD_ID = MM.MFHD_ID " & vbCrLf & _
-        "INNER JOIN Location L " & vbCrLf & _
-            "ON MM.Location_ID = L.Location_ID " & vbCrLf & _
-        "WHERE (L.Location_Code LIKE 'ea%' OR L.Location_Code LIKE 'yr%') " & vbCrLf & _
-        "ORDER BY T.Bib_ID "
-'*** BE SURE TO USE THE RIGHT SQL ***'
+    SQL = GetTextFromFile(GL.InputFilename)
 
     HolRS = GL.GetRS
     ItemRS = GL.GetRS
